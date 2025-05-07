@@ -182,7 +182,6 @@ a {
 
 .article-content h2 {
     font-size: 20px;
-    margin-top: 32px;
     margin-bottom: 16px;
     font-weight: 500;
     font-family: var(--font-heading);
@@ -423,7 +422,6 @@ a {
 /* SuperBlock styles */
 .superblock {
     display: flex;
-    margin-bottom: 20px;
     width: 100%;
 }
 
