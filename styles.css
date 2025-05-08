@@ -1,52 +1,6 @@
-/* Tables */
-.article-content table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 16px;
-    font-size: 14px;
-}
-
-.article-content th,
-.article-content td {
-    padding: 8px 10px;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.article-content th {
-    font-weight: 500;
-    color: var(--text-color);
-    background-color: var(--gray-3);
-}
-
-.article-content tr:nth-child(even) {
-    background-color: var(--gray-3);
-}
-
-.article-content td {
-    color: var(--text-secondary);
-}
-
-/* Make tables responsive */
-@media (max-width: 640px) {
-    .article-content table {
-        overflow-x: auto;
-        white-space: nowrap;
-    }
-}/* Links in article content */
-.article-content a {
-    color: var(--text-color);
-    text-decoration: none;
-    background-color: rgba(75, 121, 161, 0.1); /* Light blue background */
-    border-radius: 3px;
-    padding: 0 4px;
-    transition: background-color 0.2s ease;
-}
-
-.article-content a:hover {
-    background-color: rgba(75, 121, 161, 0.2); /* Slightly darker on hover */
-}/* Base styles and variables */
+/* Base styles and variables */
 :root {
+    /* Light theme variables */
     --content-width: 640px;
     --font-body: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
     --font-heading: var(--font-body);
@@ -55,12 +9,43 @@
     --bg-color: #f9f9f9;
     --border-color: #e0e0e0;
     --gray-3: #f0f0f0;
+    --link-bg: rgba(75, 121, 161, 0.1);
+    --link-bg-hover: rgba(75, 121, 161, 0.2);
+    --info-bg: #e8f4fd;
+    --info-color: #0c5460;
+    --warning-bg: #fff3cd;
+    --warning-color: #856404;
+    --success-bg: #dff0d8;
+    --success-color: #3c763d;
+    --error-bg: #f8d7da;
+    --error-color: #721c24;
     --horizontal-padding: 20px;
     --spacing-1: 4px;
     --spacing-2: 8px;
     --spacing-3: 12px;
     --spacing-4: 16px;
     --spacing-5: 20px;
+}
+
+/* Dark theme using prefers-color-scheme */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --text-color: #e8e6e3;
+        --text-secondary: #a9a196;
+        --bg-color: #181a1b;
+        --border-color: #393d40;
+        --gray-3: #202325;
+        --link-bg: rgba(60, 97, 129, 0.1);
+        --link-bg-hover: rgba(60, 97, 129, 0.2);
+        --info-bg: #0c3440;
+        --info-color: #8ebad9;
+        --warning-bg: #3d3012;
+        --warning-color: #e2cc8f;
+        --success-bg: #1e3a1e;
+        --success-color: #9fd09f;
+        --error-bg: #430c11;
+        --error-color: #e1868f;
+    }
 }
 
 /* Reset and base styles */
@@ -111,8 +96,22 @@ a {
     text-decoration: none;
 }
 
-.link a {
+/* Links in article content */
+.article-content a {
+    color: var(--text-color);
+    text-decoration: none;
+    background-color: var(--link-bg);
+    border-radius: 3px;
+    padding: 0 4px;
+    transition: background-color 0.2s ease;
+}
 
+.article-content a:hover {
+    background-color: var(--link-bg-hover);
+}
+
+.link a {
+    /* Specific link styling */
 }
 
 .tag a {
@@ -208,6 +207,43 @@ a {
     margin-bottom: 0;
 }
 
+/* Tables */
+.article-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 14px;
+}
+
+.article-content th,
+.article-content td {
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.article-content th {
+    font-weight: 500;
+    color: var(--text-color);
+    background-color: var(--gray-3);
+}
+
+.article-content tr:nth-child(even) {
+    background-color: var(--gray-3);
+}
+
+.article-content td {
+    color: var(--text-secondary);
+}
+
+/* Make tables responsive */
+@media (max-width: 640px) {
+    .article-content table {
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+
 /* Code blocks and inline code */
 .article-content pre {
     background-color: var(--gray-3);
@@ -237,7 +273,7 @@ a {
 
 /* Keyboard keys */
 .article-content kbd {
-    background-color: #f7f7f7;
+    background-color: var(--gray-3);
     border: 1px solid var(--border-color);
     border-radius: 3px;
     box-shadow: 0 1px 0 rgba(0,0,0,0.2);
@@ -263,65 +299,65 @@ a {
 }
 
 .article-content .info-box {
-    background-color: #e8f4fd;
-    border-left-color: #0c5460;
-    color: #0c5460;
+    background-color: var(--info-bg);
+    border-left-color: var(--info-color);
+    color: var(--info-color);
 }
 
 .article-content .warning-box {
-    background-color: #fff3cd;
-    border-left-color: #856404;
-    color: #856404;
+    background-color: var(--warning-bg);
+    border-left-color: var(--warning-color);
+    color: var(--warning-color);
 }
 
 .article-content .success-box {
-    background-color: #dff0d8;
-    border-left-color: #3c763d;
-    color: #3c763d;
+    background-color: var(--success-bg);
+    border-left-color: var(--success-color);
+    color: var(--success-color);
 }
 
 .article-content .error-box {
-    background-color: #f8d7da;
-    border-left-color: #721c24;
-    color: #721c24;
+    background-color: var(--error-bg);
+    border-left-color: var(--error-color);
+    color: var(--error-color);
 }
 
 /* Inline colored text styles */
 .article-content span.info-box {
-    background-color: #e8f4fd;
-    color: #0c5460;
+    background-color: var(--info-bg);
+    color: var(--info-color);
     padding: 2px 4px;
-    border-left: 2px solid #0c5460;
+    border-left: 2px solid var(--info-color);
     border-radius: 2px;
     margin: 0;
     display: inline;
 }
 
 .article-content span.success-box {
-    background-color: #dff0d8;
-    color: #3c763d;
+    background-color: var(--success-bg);
+    color: var(--success-color);
     padding: 2px 4px;
-    border-left: 2px solid #3c763d;
+    border-left: 2px solid var(--success-color);
     border-radius: 2px;
     margin: 0;
     display: inline;
 }
 
 .article-content span.warning-box {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: var(--warning-bg);
+    color: var(--warning-color);
     padding: 2px 4px;
-    border-left: 2px solid #856404;
+    border-left: 2px solid var(--warning-color);
     border-radius: 2px;
     margin: 0;
     display: inline;
 }
 
 .article-content span.error-box {
-    background-color: #f8d7da;
-    color: #721c24;
+    background-color: var(--error-bg);
+    color: var(--error-color);
     padding: 2px 4px;
-    border-left: 2px solid #721c24;
+    border-left: 2px solid var(--error-color);
     border-radius: 2px;
     margin: 0;
     display: inline;
@@ -354,14 +390,7 @@ a {
     height: 16px;
 }
 
-/* Responsive adjustments */
-@media (max-width: 640px) {
-    .container {
-        padding-top: 80px; /* 20px * 4 */
-        width: calc(100% - 40px);
-    }
-}
-
+/* Task list styling */
 .task-list {
     list-style-type: none;
     padding-left: 5px;
@@ -381,12 +410,12 @@ a {
     margin-right: 10px;
     border: 2px solid #bdc3c7;
     border-radius: 2px;
-    background-color: #3498db;
-    border-color: #3498db;
+    background-color: var(--bg-color);
+    border-color: var(--border-color);
     list-style: none;
-    display: inline-block; /* Keep them as inline-block */
-    position: relative; /* For positioning */
-    vertical-align: middle; /* Align with text */
+    display: inline-block;
+    position: relative;
+    vertical-align: middle;
 }
 
 /* Ensure no list-style behavior */
@@ -399,6 +428,14 @@ a {
 .task-checkbox-checked {
     background-color: #3498db;
     border-color: #3498db;
+}
+
+/* Adjust checkbox color in dark mode */
+@media (prefers-color-scheme: dark) {
+    .task-checkbox-checked {
+        background-color: #2980b9;
+        border-color: #2980b9;
+    }
 }
 
 .task-checkbox-checked:after {
@@ -415,7 +452,7 @@ a {
 
 .task-complete {
     text-decoration: line-through;
-    color: #7f8c8d;
+    color: var(--text-secondary);
 }
 
 /* SuperBlock styles */
@@ -444,8 +481,22 @@ a {
     margin-bottom: 10px;
 }
 
+/* Heading and paragraph spacing within superblocks */
+.superblock h2,
+.superblock h3,
+.superblock h4,
+.superblock h5,
+.superblock h6 {
+    margin-top: 0; /* Remove default top margin to keep content tight within blocks */
+}
+
 /* Responsive adjustments */
 @media (max-width: 640px) {
+    .container {
+        padding-top: 80px; /* 20px * 4 */
+        width: calc(100% - 40px);
+    }
+
     .superblock-row {
         flex-direction: column;
         gap: 10px;
@@ -454,13 +505,4 @@ a {
     .superblock-row > * {
         width: 100%;
     }
-}
-
-/* Heading and paragraph spacing within superblocks */
-.superblock h2,
-.superblock h3,
-.superblock h4,
-.superblock h5,
-.superblock h6 {
-    margin-top: 0; /* Remove default top margin to keep content tight within blocks */
 }
