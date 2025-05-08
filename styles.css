@@ -30,7 +30,6 @@
 /* Make tables responsive */
 @media (max-width: 640px) {
     .article-content table {
-        display: block;
         overflow-x: auto;
         white-space: nowrap;
     }
