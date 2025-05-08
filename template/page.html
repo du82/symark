@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}} | {{site_name}}</title>
+    <link rel="stylesheet" href="styles.css">
+    <meta name="description" content="{{meta_description}}">
+</head>
+<body>
+    <div class="container">
+        {{back_navigation}}
+        <main>
+            <div class="article-header">
+                <div class="title-container">
+                    <h1 class="article-title">{{title}}</h1>
+                </div>
+                <div class="article-meta">
+                    <p>{{publish_date}}</p>
+                </div>
+            </div>
+
+            <div class="article-content">
+                {{content}}
+            </div>
+        </main>
+    </div>
+</body>
+</html>
