@@ -343,8 +343,7 @@ fn main() -> std::io::Result<()> {
     fs::create_dir_all(&assets_dir)?;
 
     // Find and copy all asset directories
-    find_and_copy_assets(Path::new("Physical Space"), &assets_dir)?;
-    find_and_copy_assets(Path::new("Digital Space"), &assets_dir)?;
+    find_and_copy_assets(Path::new("input"), &assets_dir)?;
 
     // Copy CSS file to output directory
     let css_template = read_template("template/styles.css");
@@ -354,7 +353,7 @@ fn main() -> std::io::Result<()> {
 
     // Find all .sy files in the directory structure
     let mut note_files = Vec::new();
-    find_sy_files(Path::new("SyMark"), &mut note_files)?;
+    find_sy_files(Path::new("input"), &mut note_files)?;
 
     // Parse all notes and build a map from ID to note
     let mut notes_map = HashMap::new();
