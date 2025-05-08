@@ -1,105 +1,29 @@
-name: Build and Release
+# .github/workflows/release.yml
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [created]
 
 jobs:
-  build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+  release:
+    name: release ${{ matrix.target }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            asset_name: app-linux-amd64
-            
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            asset_name: app-linux-arm64
-            
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            asset_name: app-macos-amd64
-            
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            asset_name: app-macos-arm64
-            
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            asset_name: app-windows-amd64.exe
-
+          - target: x86_64-pc-windows-gnu
+            archive: zip
+          - target: x86_64-unknown-linux-musl
+            archive: tar.gz tar.xz tar.zst
+          - target: x86_64-apple-darwin
+            archive: zip
     steps:
-    - uses: actions/checkout@v2
-    
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: stable
-        override: true
-        target: ${{ matrix.target }}
-    
-    - name: Install Cross-compilation dependencies
-      if: matrix.target == 'aarch64-unknown-linux-gnu'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-aarch64-linux-gnu
-
-    - name: Build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --release --target ${{ matrix.target }}
-        
-    - name: Prepare artifact
-      shell: bash
-      run: |
-        mkdir -p artifacts
-        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          cp target/${{ matrix.target }}/release/SyMark.exe artifacts/${{ matrix.asset_name }}
-        else
-          cp target/${{ matrix.target }}/release/SyMark artifacts/${{ matrix.asset_name }}
-          chmod +x artifacts/${{ matrix.asset_name }}
-        fi
-        
-    - name: Upload artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: ${{ matrix.asset_name }}
-        path: artifacts/${{ matrix.asset_name }}
-        
-  release:
-    name: Create Release
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write  # Needed for creating releases
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-      
-    - name: Download all artifacts
-      uses: actions/download-artifact@v2
-      with:
-        path: artifacts
-        
-    - name: Create Release
-      id: create_release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          artifacts/app-linux-amd64/app-linux-amd64
-          artifacts/app-linux-arm64/app-linux-arm64
-          artifacts/app-macos-amd64/app-macos-amd64
-          artifacts/app-macos-arm64/app-macos-arm64
-          artifacts/app-windows-amd64.exe/app-windows-amd64.exe
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@master
+      - name: Compile and release
+        uses: rust-build/rust-build.action@v1.4.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          RUSTTARGET: ${{ matrix.target }}
+          ARCHIVE_TYPES: ${{ matrix.archive }}
