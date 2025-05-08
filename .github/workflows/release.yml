@@ -34,7 +34,7 @@ jobs:
             asset_name: app-windows-amd64.exe
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v2
     
     - name: Install Rust
       uses: actions-rs/toolchain@v1
@@ -68,7 +68,7 @@ jobs:
         fi
         
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.asset_name }}
         path: artifacts/${{ matrix.asset_name }}
@@ -77,12 +77,14 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed for creating releases
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v2
       
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v2
       with:
         path: artifacts
         
