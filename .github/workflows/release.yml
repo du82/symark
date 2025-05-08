@@ -61,9 +61,9 @@ jobs:
       run: |
         mkdir -p artifacts
         if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          cp target/${{ matrix.target }}/release/your_binary_name.exe artifacts/${{ matrix.asset_name }}
+          cp target/${{ matrix.target }}/release/SyMark.exe artifacts/${{ matrix.asset_name }}
         else
-          cp target/${{ matrix.target }}/release/your_binary_name artifacts/${{ matrix.asset_name }}
+          cp target/${{ matrix.target }}/release/SyMark artifacts/${{ matrix.asset_name }}
           chmod +x artifacts/${{ matrix.asset_name }}
         fi
         
