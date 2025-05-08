@@ -34,7 +34,7 @@ jobs:
             asset_name: app-windows-amd64.exe
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v2
     
     - name: Install Rust
       uses: actions-rs/toolchain@v1
@@ -61,14 +61,14 @@ jobs:
       run: |
         mkdir -p artifacts
         if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          cp target/${{ matrix.target }}/release/your_binary_name.exe artifacts/${{ matrix.asset_name }}
+          cp target/${{ matrix.target }}/release/SyMark.exe artifacts/${{ matrix.asset_name }}
         else
-          cp target/${{ matrix.target }}/release/your_binary_name artifacts/${{ matrix.asset_name }}
+          cp target/${{ matrix.target }}/release/SyMark artifacts/${{ matrix.asset_name }}
           chmod +x artifacts/${{ matrix.asset_name }}
         fi
         
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: ${{ matrix.asset_name }}
         path: artifacts/${{ matrix.asset_name }}
@@ -77,12 +77,14 @@ jobs:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed for creating releases
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v2
       
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v2
       with:
         path: artifacts
         
