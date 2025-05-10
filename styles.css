@@ -490,6 +490,27 @@ a {
     margin-top: 0; /* Remove default top margin to keep content tight within blocks */
 }
 
+/* Video handling */
+.video-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 16px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.video-container video {
+    width: 100%;
+    display: block;
+    border-radius: 4px;
+    background-color: var(--gray-3);
+}
+
+/* Playback controls styling */
+.video-container video::-webkit-media-controls {
+    background-color: var(--bg-color);
+}
+
 /* Responsive adjustments */
 @media (max-width: 640px) {
     .container {
