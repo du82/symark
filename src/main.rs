@@ -35,6 +35,8 @@ struct Properties {
     #[serde(default)]
     updated: String,
     #[serde(default)]
+    created: String,
+    #[serde(default)]
     style: String,
 }
 
@@ -311,10 +313,14 @@ fn main() -> std::io::Result<()> {
     // Start the timer
     let start_time = Instant::now();
     let mut page_count = 0;
+    
+    println!("Starting SyMark generator...");
 
     // Create template directory if it doesn't exist
     let template_dir = PathBuf::from("template");
+    println!("Template directory: {:?}", template_dir);
     if !template_dir.exists() {
+        println!("Creating template directory...");
         fs::create_dir_all(&template_dir)?;
 
         // Templates will be written here (using the existing ones)
@@ -333,29 +339,39 @@ fn main() -> std::io::Result<()> {
 
     // Create the output directory
     let output_dir = PathBuf::from("output");
+    println!("Output directory: {:?}", output_dir);
     if output_dir.exists() {
+        println!("Removing existing output directory...");
         fs::remove_dir_all(&output_dir)?;
     }
+    println!("Creating output directory...");
     fs::create_dir_all(&output_dir)?;
 
     // Create assets directory in output
     let assets_dir = output_dir.join("assets");
+    println!("Assets directory: {:?}", assets_dir);
     fs::create_dir_all(&assets_dir)?;
 
     // Find and copy all asset directories
+    println!("Finding and copying assets...");
     find_and_copy_assets(Path::new("input"), &assets_dir)?;
 
     // Copy CSS file to output directory
+    println!("Reading CSS template...");
     let css_template = read_template("template/styles.css");
     let css_path = output_dir.join("styles.css");
+    println!("Writing CSS to: {:?}", css_path);
     let mut css_file = File::create(&css_path)?;
     css_file.write_all(css_template.as_bytes())?;
 
     // Find all .sy files in the directory structure
+    println!("Finding .sy files...");
     let mut note_files = Vec::new();
     find_sy_files(Path::new("input"), &mut note_files)?;
+    println!("Found {} .sy files", note_files.len());
 
     // Parse all notes and build a map from ID to note
+    println!("Parsing notes...");
     let mut notes_map = HashMap::new();
     let mut id_to_path = HashMap::new();
     let mut all_tags = HashSet::new();
@@ -364,9 +380,15 @@ fn main() -> std::io::Result<()> {
     for path in &note_files {
         let content = fs::read_to_string(path)?;
         match serde_json::from_str::<Note>(&content) {
-            Ok(note) => {
+            Ok(mut note) => {
                 let id = note.ID.clone(); // Clone the ID before moving the note
                 id_to_path.insert(id.clone(), path.clone());
+                
+                // Extract creation date from note ID if it's not set
+                if note.Properties.created.is_empty() && id.len() >= 14 {
+                    // Format is YYYYMMDDhhmmss-xxx
+                    note.Properties.created = id[0..14].to_string();
+                }
 
                 // Extract tags from the note - but filter out "index" when adding to all_tags
                 if !note.Properties.tags.is_empty() {
@@ -397,10 +419,12 @@ fn main() -> std::io::Result<()> {
         }
     }
 
+    println!("Reading HTML template...");
     let html_template = read_template("template/page.html");
 
     // Generate index page first (list of all notes)
     if let Some(index_id) = &index_note_id {
+        println!("Generating custom index page with ID: {}", index_id);
         // Use the content of the note with the "index" tag as the index page
         generate_custom_index_page(index_id, &notes_map, &id_to_path, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
@@ -415,16 +439,20 @@ fn main() -> std::io::Result<()> {
     }
 
     // Generate HTML for each note
+    println!("Generating HTML for each note...");
     for (id, note) in &notes_map {
         // Skip generating the individual file for the index note
         if Some(id.as_str()) != index_note_id.as_deref() {
+            println!("Generating HTML for note: {}", id);
             generate_html_for_note(id, &notes_map, &id_to_path, &output_dir, &all_tags, &html_template)?;
             page_count += 1;
         }
     }
 
     // Generate a page for each tag
+    println!("Generating tag pages...");
     for tag in &all_tags {
+        println!("Generating page for tag: {}", tag);
         generate_tag_page(tag, &notes_map, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
     }
@@ -438,6 +466,24 @@ fn main() -> std::io::Result<()> {
     } else {
         let elapsed_sec = elapsed.as_secs_f64();
         println!("✓ Built {} pages in {:.2} s", page_count, elapsed_sec);
+    }
+
+    // List the output directory contents
+    println!("Checking output directory:");
+    match fs::read_dir(&output_dir) {
+        Ok(entries) => {
+            let entries: Vec<_> = entries.collect();
+            if entries.is_empty() {
+                println!("  Warning: Output directory is empty!");
+            } else {
+                for entry in entries {
+                    if let Ok(entry) = entry {
+                        println!("  - {:?}", entry.path());
+                    }
+                }
+            }
+        },
+        Err(e) => println!("  Error reading output directory: {}", e),
     }
 
     println!("HTML generation complete. Output written to {:?}", output_dir);
@@ -523,6 +569,17 @@ fn generate_custom_index_page(
     } else {
         "Notes Index".to_string()
     };
+    
+    // Extract creation date from ID if not present in properties
+    let created_date = if !note.Properties.created.is_empty() {
+        note.Properties.created.clone()
+    } else if note.ID.len() >= 14 {
+        // Extract timestamp from ID (format: YYYYMMDDhhmmss-xxx)
+        let timestamp = &note.ID[0..14];
+        timestamp.to_string()
+    } else {
+        String::new()
+    };
 
     let mut html = html_template.replace("{{title}}", &title);
     let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
@@ -532,7 +589,18 @@ fn generate_custom_index_page(
     html = html.replace("{{blog_description}}", "A collection of notes");
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
-    html = html.replace("{{publish_date}}", &naturalize_date(&note.Properties.updated));
+    html = html.replace("{{publish_date}}", &naturalize_date(&created_date));
+    
+    // Format conditional date string
+    let formatted_date = if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+        format!("Created on {}, updated on {}", 
+            naturalize_date(&created_date),
+            naturalize_date(&note.Properties.updated))
+    } else {
+        format!("Created on {}", naturalize_date(&created_date))
+    };
+    html = html.replace("{{last_updated_date}}", &formatted_date);
+    
     html = html.replace("{{category}}", "Notes");
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
@@ -579,9 +647,20 @@ fn generate_custom_index_page(
         }
         meta.push_str("<br>");
     }
-    if !note.Properties.updated.is_empty() {
+    
+    // Display creation date
+    if !created_date.is_empty() {
+        meta.push_str(&format!("Created: {}", naturalize_date(&created_date)));
+    }
+    
+    // Display update date if it's different from creation date
+    if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+        if !created_date.is_empty() {
+            meta.push_str("<br>");
+        }
         meta.push_str(&format!("Last updated: {}", naturalize_date(&note.Properties.updated)));
     }
+    
     html = html.replace("{{note_meta}}", &meta);
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
@@ -609,6 +688,11 @@ fn generate_all_notes_page(
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
+    
+    // Simple format for the all notes page
+    let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
+    html = html.replace("{{last_updated_date}}", &formatted_date);
+    
     html = html.replace("{{category}}", "Notes");
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
@@ -703,6 +787,11 @@ fn generate_index_page(
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
+    
+    // Simple format for the index page
+    let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
+    html = html.replace("{{last_updated_date}}", &formatted_date);
+    
     html = html.replace("{{category}}", "Notes");
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
@@ -797,7 +886,13 @@ fn generate_tag_page(
     html = html.replace("{{blog_description}}", "A collection of tagged notes");
     html = html.replace("{{reading_time}}", "1");
     html = html.replace("{{author_name}}", "Notes Author");
-    html = html.replace("{{publish_date}}", &naturalize_date(&Local::now().format("%Y%m%d").to_string()));
+    let current_date = Local::now().format("%Y%m%d").to_string();
+    html = html.replace("{{publish_date}}", &naturalize_date(&current_date));
+    
+    // Simple format for tag pages
+    let formatted_date = format!("Created on {}", naturalize_date(&current_date));
+    html = html.replace("{{last_updated_date}}", &formatted_date);
+    
     html = html.replace("{{category}}", &format!("Tag: {}", tag));
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
@@ -891,6 +986,17 @@ fn generate_html_for_note(
         id.to_string()
     };
 
+    // Extract creation date from ID if not present in properties
+    let created_date = if !note.Properties.created.is_empty() {
+        note.Properties.created.clone()
+    } else if note.ID.len() >= 14 {
+        // Extract timestamp from ID (format: YYYYMMDDhhmmss-xxx)
+        let timestamp = &note.ID[0..14];
+        timestamp.to_string()
+    } else {
+        String::new()
+    };
+
     let mut html = html_template.replace("{{title}}", &title);
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "Notes Collection");
@@ -902,7 +1008,20 @@ fn generate_html_for_note(
     html = html.replace("{{reading_time}}", "");
 
     html = html.replace("{{author_name}}", "Notes Author");
-    html = html.replace("{{publish_date}}", &naturalize_date(&note.Properties.updated));
+    
+    // Use created date for publish_date
+    html = html.replace("{{publish_date}}", &naturalize_date(&created_date));
+    
+    // Format conditional date string
+    let formatted_date = if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+        format!("Created on {}, updated on {}", 
+            naturalize_date(&created_date),
+            naturalize_date(&note.Properties.updated))
+    } else {
+        format!("Created on {}", naturalize_date(&created_date))
+    };
+    html = html.replace("{{last_updated_date}}", &formatted_date);
+    
     html = html.replace("{{category}}", &note.Properties.note_type);
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
@@ -946,9 +1065,20 @@ fn generate_html_for_note(
         }
         meta.push_str("<br>");
     }
-    if !note.Properties.updated.is_empty() {
+    
+    // Display creation date
+    if !created_date.is_empty() {
+        meta.push_str(&format!("Created: {}", naturalize_date(&created_date)));
+    }
+    
+    // Display update date if it's different from creation date
+    if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+        if !created_date.is_empty() {
+            meta.push_str("<br>");
+        }
         meta.push_str(&format!("Last updated: {}", naturalize_date(&note.Properties.updated)));
     }
+    
     html = html.replace("{{note_meta}}", &meta);
 
     // Set generation date
