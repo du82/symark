@@ -88,18 +88,26 @@ struct Block {
 }
 
 // Helper function to determine if a style should be converted to a special CSS class
-fn get_style_class(style: &str) -> Option<&str> {
+fn get_style_class(style: &str, is_inline: bool) -> Option<String> {
     // Look for SiYuan's special background and color combinations
-    if style.contains("var(--b3-card-info-background)") && style.contains("var(--b3-card-info-color)") {
-        return Some("info-box");
+    let base_class = if style.contains("var(--b3-card-info-background)") && style.contains("var(--b3-card-info-color)") {
+        "info-box"
     } else if style.contains("var(--b3-card-success-background)") && style.contains("var(--b3-card-success-color)") {
-        return Some("success-box");
+        "success-box"
     } else if style.contains("var(--b3-card-warning-background)") && style.contains("var(--b3-card-warning-color)") {
-        return Some("warning-box");
+        "warning-box"
     } else if style.contains("var(--b3-card-error-background)") && style.contains("var(--b3-card-error-color)") {
-        return Some("error-box");
+        "error-box"
+    } else {
+        return None;
+    };
+    
+    // Modify class name to ensure we get inline styling for text markers
+    if is_inline {
+        Some(format!("inline-{}", base_class))
+    } else {
+        Some(base_class.to_string())
     }
-    None
 }
 
 // Read HTML and CSS templates from files
@@ -1259,7 +1267,7 @@ fn render_blocks(
 
                 // Check if paragraph has special styling
                 if !block.Properties.style.is_empty() {
-                    if let Some(class_name) = get_style_class(&block.Properties.style) {
+                    if let Some(class_name) = get_style_class(&block.Properties.style, false) {
                         class_attr = format!(" class=\"{}\"", class_name);
                     } else {
                         // Keep the original style if no special class is applied
@@ -1267,9 +1275,18 @@ fn render_blocks(
                     }
                 }
 
-                html.push_str(&format!("<p{}{}>", class_attr, style_attr));
-                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                html.push_str("</p>\n");
+                // Check if this paragraph contains only an image
+                let contains_only_image = block.Children.len() == 1 && 
+                    block.Children[0].Type == "NodeImage";
+                
+                if contains_only_image {
+                    // For image-only paragraphs, don't add paragraph spacing
+                    html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
+                } else {
+                    html.push_str(&format!("<p{}{}>", class_attr, style_attr));
+                    html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
+                    html.push_str("</p>\n");
+                }
             },
             "NodeHeading" => {
                 let level = block.HeadingLevel.max(1).min(6);
@@ -1352,7 +1369,27 @@ fn render_blocks(
                 } else {
                     // Regular list item
                     html.push_str("<li>");
-                    html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
+                    
+                    // Combine adjacent paragraphs to avoid unnecessary whitespace
+                    let mut content = String::new();
+                    let mut last_was_paragraph = false;
+                    
+                    for child in &block.Children {
+                        if child.Type == "NodeParagraph" {
+                            // For consecutive paragraphs, don't add closing and opening p tags
+                            if last_was_paragraph {
+                                content.push_str(&render_blocks(&child.Children, notes_map, id_to_path));
+                            } else {
+                                content.push_str(&render_block(child, notes_map, id_to_path));
+                                last_was_paragraph = true;
+                            }
+                        } else {
+                            content.push_str(&render_block(child, notes_map, id_to_path));
+                            last_was_paragraph = false;
+                        }
+                    }
+                    
+                    html.push_str(&content);
                 }
                 html.push_str("</li>\n");
             },
@@ -1481,11 +1518,29 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
             ));
             html.push_str("</code>");
         },
-        "strong" => {
-            html.push_str(&format!(
-                "<strong>{}",
-                escape_html(&block.TextMarkTextContent)
-            ));
+        "strong" | "strong text" => {
+            // Handle both "strong" and "strong text" the same way
+            let content = escape_html(&block.TextMarkTextContent);
+            
+            // Check if there are style properties for special highlights
+            if !block.Properties.style.is_empty() {
+                if let Some(class_name) = get_style_class(&block.Properties.style, true) {
+                    html.push_str(&format!(
+                        "<strong class=\"{}\">{}",
+                        class_name,
+                        content
+                    ));
+                } else {
+                    // Use inline style for custom colors
+                    html.push_str(&format!(
+                        "<strong style=\"{}\">{}",
+                        block.Properties.style,
+                        content
+                    ));
+                }
+            } else {
+                html.push_str(&format!("<strong>{}", content));
+            }
             html.push_str("</strong>");
         },
         "em" => {
@@ -1537,24 +1592,30 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
             ));
             html.push_str("</mark>");
         },
-        "text" => {
+        "text" | "text strong" => {
             // Check if there are style properties for special highlights
             if !block.Properties.style.is_empty() {
-                if let Some(class_name) = get_style_class(&block.Properties.style) {
+                let content = escape_html(&block.TextMarkTextContent);
+                let tag_open = if block.TextMarkType == "text strong" { "<strong" } else { "<span" };
+                let tag_close = if block.TextMarkType == "text strong" { "</strong>" } else { "</span>" };
+                
+                if let Some(class_name) = get_style_class(&block.Properties.style, true) {
                     html.push_str(&format!(
-                        "<span class=\"{}\">{}",
+                        "{} class=\"{}\">{}",
+                        tag_open,
                         class_name,
-                        escape_html(&block.TextMarkTextContent)
+                        content
                     ));
                 } else {
                     // Use inline style for custom colors
                     html.push_str(&format!(
-                        "<span style=\"{}\">{}",
+                        "{} style=\"{}\">{}",
+                        tag_open,
                         block.Properties.style,
-                        escape_html(&block.TextMarkTextContent)
+                        content
                     ));
                 }
-                html.push_str("</span>");
+                html.push_str(tag_close);
             } else {
                 html.push_str(&escape_html(&block.TextMarkTextContent));
             }
