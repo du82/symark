@@ -28,6 +28,9 @@ struct Properties {
     #[serde(default)]
     title: String,
     #[serde(default)]
+    #[serde(rename = "title-img")]
+    title_img: String,
+    #[serde(default)]
     tags: String,
     #[serde(default)]
     #[serde(rename = "type")]
@@ -582,10 +585,22 @@ fn generate_custom_index_page(
     };
 
     let mut html = html_template.replace("{{title}}", &title);
-    let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
     html = html.replace("{{css_path}}", "styles.css");
-    html = html.replace("{{site_name}}", "SyMark");
-    html = html.replace("{{meta_description}}", "Collection of notes");
+    html = html.replace("{{site_name}}", "Notes Collection");
+    html = html.replace("{{meta_description}}", &title);
+    html = html.replace("{{blog_description}}", "A collection of notes");
+    html = html.replace("{{back_navigation}}", "");
+    
+    // Add header image if it exists
+    if !note.Properties.title_img.is_empty() {
+        html = html.replace("{{#header_image}}", "");
+        html = html.replace("{{/header_image}}", "");
+        html = html.replace("{{header_image}}", &note.Properties.title_img);
+    } else {
+        // Remove header image section if no image
+        html = html.replace("{{#header_image}}", "<!-- ");
+        html = html.replace("{{/header_image}}", " -->");
+    }
     html = html.replace("{{blog_description}}", "A collection of notes");
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
@@ -697,6 +712,10 @@ fn generate_all_notes_page(
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
     html = html.replace("{{back_navigation}}", BACK_NAVIGATION_HTML);
+    
+    // No header image for all notes page
+    html = html.replace("{{#header_image}}", "<!-- ");
+    html = html.replace("{{/header_image}}", " -->");
 
     // Generate navigation items - sort by title for better navigation
     let mut sorted_notes: Vec<_> = notes_map.values().filter(|n| !n.Properties.title.is_empty()).collect();
@@ -783,6 +802,10 @@ fn generate_index_page(
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "Notes Collection");
     html = html.replace("{{meta_description}}", "Collection of all notes");
+    
+    // No header image for index page
+    html = html.replace("{{#header_image}}", "<!-- ");
+    html = html.replace("{{/header_image}}", " -->");
     html = html.replace("{{blog_description}}", "A collection of all notes");
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
@@ -878,25 +901,29 @@ fn generate_tag_page(
     all_tags: &HashSet<String>,
     html_template: &str,
 ) -> std::io::Result<()> {
-    let title = format!("Notes tagged with \"{}\"", tag);
-    let mut html = html_template.replace("{{title}}", &title);
+    let mut html = html_template.replace("{{title}}", &format!("Tag: {}", tag));
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "Notes Collection");
     html = html.replace("{{meta_description}}", &format!("Notes tagged with {}", tag));
-    html = html.replace("{{blog_description}}", "A collection of tagged notes");
-    html = html.replace("{{reading_time}}", "1");
+    html = html.replace("{{blog_description}}", &format!("Notes tagged with {}", tag));
+    html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
-    let current_date = Local::now().format("%Y%m%d").to_string();
-    html = html.replace("{{publish_date}}", &naturalize_date(&current_date));
+    
+    let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
+    html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
     
     // Simple format for tag pages
-    let formatted_date = format!("Created on {}", naturalize_date(&current_date));
+    let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
     html = html.replace("{{last_updated_date}}", &formatted_date);
     
-    html = html.replace("{{category}}", &format!("Tag: {}", tag));
+    html = html.replace("{{category}}", "Tag");
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
     html = html.replace("{{back_navigation}}", BACK_NAVIGATION_HTML);
+    
+    // No header image for tag pages
+    html = html.replace("{{#header_image}}", "<!-- ");
+    html = html.replace("{{/header_image}}", " -->");
 
     // Generate navigation items - sort by title
     let mut sorted_notes: Vec<_> = notes_map.values().filter(|n| !n.Properties.title.is_empty()).collect();
@@ -1003,6 +1030,17 @@ fn generate_html_for_note(
     html = html.replace("{{meta_description}}", &title);
     html = html.replace("{{blog_description}}", "A collection of notes");
     html = html.replace("{{back_navigation}}", BACK_NAVIGATION_HTML);
+    
+    // Add header image if it exists
+    if !note.Properties.title_img.is_empty() {
+        html = html.replace("{{#header_image}}", "");
+        html = html.replace("{{/header_image}}", "");
+        html = html.replace("{{header_image}}", &note.Properties.title_img);
+    } else {
+        // Remove header image section if no image
+        html = html.replace("{{#header_image}}", "<!-- ");
+        html = html.replace("{{/header_image}}", " -->");
+    }
 
     // Reading time will be calculated by JavaScript
     html = html.replace("{{reading_time}}", "");
