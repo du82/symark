@@ -1594,12 +1594,48 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                     block.TextMarkBlockRefID.clone()
                 };
 
+                // Extract first few paragraphs for excerpt
+                let mut excerpt = String::new();
+                let mut paragraph_count = 0;
+                for child in &ref_note.Children {
+                    if child.Type == "NodeParagraph" {
+                        if paragraph_count > 0 {
+                            // Add line break between paragraphs, not after
+                            excerpt.push_str("<br>");
+                        }
+                        
+                        for grandchild in &child.Children {
+                            if grandchild.Type == "NodeText" {
+                                excerpt.push_str(&escape_html(&grandchild.Data));
+                                excerpt.push(' ');
+                            }
+                        }
+                        
+                        paragraph_count += 1;
+                        if paragraph_count >= 2 {
+                            break;
+                        }
+                    }
+                }
+
+                // Limit excerpt length
+                if excerpt.len() > 300 {
+                    excerpt = excerpt[0..300].to_string();
+                    excerpt.push_str("...");
+                }
+
+                // Create tooltip HTML
+                html.push_str("<span class=\"tooltip\">");
                 html.push_str(&format!(
                     "<a href=\"{}.html\">{}",
                     block.TextMarkBlockRefID,
                     escape_html(&title)
                 ));
                 html.push_str("</a>");
+                html.push_str("<span class=\"right bottom\">");
+                html.push_str(&format!("<span class=\"tooltip-title\">{}</span>", escape_html(&ref_note.Properties.title)));
+                html.push_str(&format!("<span class=\"tooltip-excerpt\">{}</span>", excerpt));
+                html.push_str("<i></i></span></span>");
             } else {
                 html.push_str(&format!(
                     "<span title=\"Missing reference: {}\">{}",
