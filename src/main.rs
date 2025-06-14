@@ -1786,24 +1786,59 @@ fn escape_html(text: &str) -> String {
 }
 
 /// Removes zero-width whitespace characters from HTML content
+/// but preserves zero-width joiners used in emoji combinations
 fn remove_zero_width_spaces(html: &str) -> String {
-    // Remove zero-width space (U+200B)
-    let html = html.replace('\u{200B}', "");
+    let mut result = String::with_capacity(html.len());
+    let mut chars = html.chars().peekable();
     
-    // Remove zero-width non-joiner (U+200C)
-    let html = html.replace('\u{200C}', "");
+    while let Some(c) = chars.next() {
+        // Skip zero-width spaces and other unwanted control characters
+        if c == '\u{200B}' || c == '\u{200C}' || c == '\u{2060}' || c == '\u{200E}' || c == '\u{200F}' {
+            continue;
+        }
+        
+        // Check if this is an emoji character (basic check)
+        let is_emoji_start = c >= '\u{1F000}' && c <= '\u{1FFFF}' || 
+                             c >= '\u{2600}' && c <= '\u{27BF}' ||
+                             c >= '\u{2300}' && c <= '\u{23FF}' ||
+                             c >= '\u{2700}' && c <= '\u{27FF}' ||
+                             c >= '\u{1F1E6}' && c <= '\u{1F1FF}';
+        
+        // Add the current character to the result
+        result.push(c);
+        
+        // If it's an emoji, preserve any zero-width joiners that follow
+        if is_emoji_start {
+            while let Some(&next) = chars.peek() {
+                if next == '\u{200D}' {
+                    // Preserve zero-width joiner for emoji combinations
+                    result.push(next);
+                    chars.next(); // Consume the peeked character
+                    
+                    // Also preserve the next character (part of the combined emoji)
+                    if let Some(emoji_part) = chars.next() {
+                        result.push(emoji_part);
+                        
+                        // Also preserve emoji variation selectors and skin tone modifiers
+                        while let Some(&modifier) = chars.peek() {
+                            if (modifier >= '\u{1F3FB}' && modifier <= '\u{1F3FF}') || modifier == '\u{FE0F}' {
+                                result.push(modifier);
+                                chars.next(); // Consume the peeked character
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                } else if (next >= '\u{1F3FB}' && next <= '\u{1F3FF}') || next == '\u{FE0F}' {
+                    // Preserve skin tone modifiers and variation selectors
+                    result.push(next);
+                    chars.next(); // Consume the peeked character
+                } else {
+                    break;
+                }
+            }
+        }
+    }
     
-    // Remove zero-width joiner (U+200D)
-    let html = html.replace('\u{200D}', "");
-    
-    // Remove word joiner (U+2060)
-    let html = html.replace('\u{2060}', "");
-    
-    // Remove left-to-right mark (U+200E)
-    let html = html.replace('\u{200E}', "");
-    
-    // Remove right-to-left mark (U+200F)
-    let html = html.replace('\u{200F}', "");
-    
-    html
+    result
 }
