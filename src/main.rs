@@ -1545,7 +1545,24 @@ fn render_blocks(
                             let content_id = &script_block.Data[id_start..id_start + id_end];
                             
                             // Create a div wrapper for the transcluded content
-                            html.push_str("<div class=\"transcluded-block\" style=\"border-left: 3px solid #3498db; padding-left: 10px; margin: 10px 0;\">");
+                            html.push_str("<div class=\"transcluded-block\">");
+                            
+                            // Add source link button
+                            let source_url = if notes_map.contains_key(content_id) {
+                                format!("{}.html", content_id) // Link to the note
+                            } else {
+                                // For block IDs, try to find which note contains it
+                                let mut source_note_id = String::new();
+                                for (note_id, note) in notes_map.iter() {
+                                    if find_block_by_id(content_id, &note.Children).is_some() {
+                                        source_note_id = note_id.clone();
+                                        break;
+                                    }
+                                }
+                                format!("{}.html#{}", source_note_id, content_id) // Link to the note with block ID anchor
+                            };
+                            
+                            html.push_str(&format!("<a href=\"{}\" class=\"source-link\">Go to source</a>", source_url));
                             
                             // Check if this is a block ID or a note ID
                             let mut found = false;
@@ -1570,6 +1587,7 @@ fn render_blocks(
                             
                             if !found {
                                 html.push_str(&format!("<p><em>Transcluded content not found: {}</em></p>", content_id));
+                                // No need to remove the source link with CSS-based approach
                             }
                             
                             html.push_str("</div>");
