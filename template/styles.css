@@ -613,7 +613,7 @@ a {
     max-width: 400px;
     top: 50%;
     left: 100%;
-    margin-left: 20px;
+    margin-left: 10px;
     transform: translate(0, -50%);
     padding: 10px 16px;
     color: var(--primary-text-color);
