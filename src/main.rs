@@ -691,11 +691,11 @@ fn generate_custom_index_page(
     html = html.replace("{{note_meta}}", &meta);
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
-        // Remove zero-width spaces before writing to file
-        let cleaned_html = remove_zero_width_spaces(&html);
+    // Remove zero-width spaces before writing to file
+    let cleaned_html = remove_zero_width_spaces(&html);
     
     // Write to file
-    let file_path = output_dir.join("all.html");
+    let file_path = output_dir.join("index.html");
     let mut file = File::create(&file_path)?;
     file.write_all(cleaned_html.as_bytes())?;
 
