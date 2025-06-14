@@ -338,12 +338,14 @@ fn main() -> std::io::Result<()> {
         let html_template = read_template("template/page.html");
         let css_template = read_template("template/styles.css");
 
-        // Write templates to files if needed
+        // Write templates to files if needed - clean them of zero-width spaces
+        let cleaned_html_template = remove_zero_width_spaces(&html_template);
         let mut html_file = File::create(template_dir.join("page.html"))?;
-        html_file.write_all(html_template.as_bytes())?;
+        html_file.write_all(cleaned_html_template.as_bytes())?;
 
+        let cleaned_css_template = remove_zero_width_spaces(&css_template);
         let mut css_file = File::create(template_dir.join("styles.css"))?;
-        css_file.write_all(css_template.as_bytes())?;
+        css_file.write_all(cleaned_css_template.as_bytes())?;
 
         println!("Created template files in {:?}", template_dir);
     }
@@ -367,13 +369,15 @@ fn main() -> std::io::Result<()> {
     println!("Finding and copying assets...");
     find_and_copy_assets(Path::new("input"), &assets_dir)?;
 
-    // Copy CSS file to output directory
+    // Write CSS file to output directory
     println!("Reading CSS template...");
     let css_template = read_template("template/styles.css");
+    // CSS files may also contain zero-width spaces, so clean them too
+    let cleaned_css = remove_zero_width_spaces(&css_template);
     let css_path = output_dir.join("styles.css");
     println!("Writing CSS to: {:?}", css_path);
     let mut css_file = File::create(&css_path)?;
-    css_file.write_all(css_template.as_bytes())?;
+    css_file.write_all(cleaned_css.as_bytes())?;
 
     // Find all .sy files in the directory structure
     println!("Finding .sy files...");
@@ -687,10 +691,13 @@ fn generate_custom_index_page(
     html = html.replace("{{note_meta}}", &meta);
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
+        // Remove zero-width spaces before writing to file
+        let cleaned_html = remove_zero_width_spaces(&html);
+    
     // Write to file
-    let index_path = output_dir.join("index.html");
-    let mut file = File::create(&index_path)?;
-    file.write_all(html.as_bytes())?;
+    let file_path = output_dir.join("all.html");
+    let mut file = File::create(&file_path)?;
+    file.write_all(cleaned_html.as_bytes())?;
 
     Ok(())
 }
@@ -791,10 +798,13 @@ fn generate_all_notes_page(
     html = html.replace("{{note_meta}}", "");
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
+    // Remove zero-width spaces before writing to file
+    let cleaned_html = remove_zero_width_spaces(&html);
+
     // Write to file
     let all_notes_path = output_dir.join("all.html");
     let mut file = File::create(&all_notes_path)?;
-    file.write_all(html.as_bytes())?;
+    file.write_all(cleaned_html.as_bytes())?;
 
     Ok(())
 }
@@ -894,10 +904,13 @@ fn generate_index_page(
     html = html.replace("{{note_meta}}", "");
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
+    // Remove zero-width spaces before writing to file
+    let cleaned_html = remove_zero_width_spaces(&html);
+
     // Write to file
     let index_path = output_dir.join("index.html");
     let mut file = File::create(&index_path)?;
-    file.write_all(html.as_bytes())?;
+    file.write_all(cleaned_html.as_bytes())?;
 
     Ok(())
 }
@@ -998,10 +1011,13 @@ fn generate_tag_page(
     html = html.replace("{{note_meta}}", "");
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
+    // Remove zero-width spaces before writing to file
+    let cleaned_html = remove_zero_width_spaces(&html);
+    
     // Write to file
     let file_path = output_dir.join(format!("tag_{}.html", tag.replace(" ", "_")));
     let mut file = File::create(&file_path)?;
-    file.write_all(html.as_bytes())?;
+    file.write_all(cleaned_html.as_bytes())?;
 
     Ok(())
 }
@@ -1130,10 +1146,13 @@ fn generate_html_for_note(
     // Set generation date
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
+    // Remove zero-width spaces before writing to file
+    let cleaned_html = remove_zero_width_spaces(&html);
+    
     // Write to file
     let file_path = output_dir.join(format!("{}.html", id));
     let mut file = File::create(&file_path)?;
-    file.write_all(html.as_bytes())?;
+    file.write_all(cleaned_html.as_bytes())?;
 
     Ok(())
 }
@@ -1734,9 +1753,32 @@ fn render_block(
 }
 
 fn escape_html(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\'', "&#39;")
+    text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+}
+
+/// Removes zero-width whitespace characters from HTML content
+fn remove_zero_width_spaces(html: &str) -> String {
+    // Remove zero-width space (U+200B)
+    let html = html.replace('\u{200B}', "");
+    
+    // Remove zero-width non-joiner (U+200C)
+    let html = html.replace('\u{200C}', "");
+    
+    // Remove zero-width joiner (U+200D)
+    let html = html.replace('\u{200D}', "");
+    
+    // Remove word joiner (U+2060)
+    let html = html.replace('\u{2060}', "");
+    
+    // Remove left-to-right mark (U+200E)
+    let html = html.replace('\u{200E}', "");
+    
+    // Remove right-to-left mark (U+200F)
+    let html = html.replace('\u{200F}', "");
+    
+    html
 }
