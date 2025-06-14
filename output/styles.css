@@ -88,7 +88,28 @@ img {
     height: auto;
     display: block;
     border-radius: 4px;
-    width: 100%
+}
+
+/* Image alignment classes */
+.article-content p img {
+    margin-bottom: 16px;
+}
+
+/* Center-aligned images through parent div or paragraph */
+.article-content p[style*="text-align: center"] img {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Right-aligned images through parent div or paragraph */
+.article-content p[style*="text-align: right"] img {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+/* Image container with parent styles */
+.article-content p div {
+    margin-bottom: 16px;
 }
 
 /* Container */
@@ -220,6 +241,14 @@ a {
     line-height: 1.7;
 }
 
+/* Centered content helper class */
+.article-content .center-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
 .article-content h2 {
     font-size: 20px;
     margin-bottom: 16px;
@@ -231,6 +260,10 @@ a {
     margin-top: 0;
     margin-bottom: 16px;
     color: var(--text-secondary);
+}
+
+.article-content p:last-of-type {
+    margin-bottom: 0;
 }
 
 /* Lists */
@@ -533,6 +566,38 @@ a {
     color: var(--text-secondary);
 }
 
+/* Transcluded block styles */
+.transcluded-block {
+    position: relative;
+    border: 1px dashed var(--blockquote-border);
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 7px;
+}
+
+.transcluded-block:hover {
+    border: 1px dashed #3498db;
+    border-radius: 7px;
+}
+
+.source-link {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    display: none;
+    background: #3498db;
+    color: white !important;
+    border: none;
+    border-radius: 5px;
+    padding: 2px 5px;
+    font-size: 12px;
+    text-decoration: none !important;
+}
+
+.transcluded-block:hover .source-link {
+    display: block;
+}
+
 /* SuperBlock styles */
 .superblock {
     display: flex;
@@ -584,7 +649,7 @@ a {
     max-width: 400px;
     top: 50%;
     left: 100%;
-    margin-left: 20px;
+    margin-left: 10px;
     transform: translate(0, -50%);
     padding: 10px 16px;
     color: var(--primary-text-color);
