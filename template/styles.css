@@ -90,6 +90,28 @@ img {
     border-radius: 4px;
 }
 
+/* Image alignment classes */
+.article-content p img {
+    margin-bottom: 16px;
+}
+
+/* Center-aligned images through parent div or paragraph */
+.article-content p[style*="text-align: center"] img {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Right-aligned images through parent div or paragraph */
+.article-content p[style*="text-align: right"] img {
+    margin-left: auto;
+    margin-right: 0;
+}
+
+/* Image container with parent styles */
+.article-content p div {
+    margin-bottom: 16px;
+}
+
 /* Container */
 .container {
     max-width: var(--content-width);
@@ -217,6 +239,14 @@ a {
     color: var(--text-color);
     font-size: 16px;
     line-height: 1.7;
+}
+
+/* Centered content helper class */
+.article-content .center-content {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .article-content h2 {

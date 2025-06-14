@@ -41,6 +41,9 @@ struct Properties {
     created: String,
     #[serde(default)]
     style: String,
+    #[serde(default)]
+    #[serde(rename = "parent-style")]
+    parent_style: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -1297,15 +1300,12 @@ fn render_blocks(
                 // Check if this paragraph contains only an image
                 let contains_only_image = block.Children.len() == 1 && 
                     block.Children[0].Type == "NodeImage";
-                
-                if contains_only_image {
-                    // For image-only paragraphs, don't add paragraph spacing
-                    html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                } else {
-                    html.push_str(&format!("<p{}{}>", class_attr, style_attr));
-                    html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                    html.push_str("</p>\n");
-                }
+
+                // Always output the paragraph with its styling, even for images
+                // This allows for centered or aligned images through paragraph styling
+                html.push_str(&format!("<p{}{}>", class_attr, style_attr));
+                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
+                html.push_str("</p>\n");
             },
             "NodeHeading" => {
                 let level = block.HeadingLevel.max(1).min(6);
@@ -1486,6 +1486,8 @@ fn render_blocks(
                 // Handle image nodes
                 let mut image_src = String::new();
                 let mut alt_text = String::new();
+                let mut style_attr = String::new();
+                let mut parent_style_attr = String::new();
 
                 // Find the link destination in children
                 for child in &block.Children {
@@ -1496,13 +1498,36 @@ fn render_blocks(
                     }
                 }
 
+                // Check if there are style properties for the image
+                if !block.Properties.style.is_empty() {
+                    style_attr = format!(" style=\"{}\"", block.Properties.style);
+                }
+
+                // Check if there's a parent-style attribute
+                if let Some(parent_style) = block.Properties.parent_style.as_ref() {
+                    if !parent_style.is_empty() {
+                        parent_style_attr = format!(" style=\"{}\"", parent_style);
+                    }
+                }
+
                 if !image_src.is_empty() {
-                    // If the image source starts with "assets/", keep it as is
+                    // If parent styling is present, wrap the image in a div with that styling
+                    if !parent_style_attr.is_empty() {
+                        html.push_str(&format!("<div{}>", parent_style_attr));
+                    }
+                    
+                    // Render the image with its style
                     html.push_str(&format!(
-                        "<img src=\"{}\" alt=\"{}\" />",
+                        "<img src=\"{}\" alt=\"{}\"{}/>",
                         image_src,
-                        alt_text
+                        alt_text,
+                        style_attr
                     ));
+                    
+                    // Close the parent div if it was opened
+                    if !parent_style_attr.is_empty() {
+                        html.push_str("</div>");
+                    }
                 }
             },
             "NodeBr" => {
