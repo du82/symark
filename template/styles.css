@@ -568,14 +568,12 @@ a {
     border-left: 3px solid #3498db;
     padding-left: 10px;
     margin: 10px 0;
-    transition: all 0.3s ease;
 }
 
 .transcluded-block:hover {
-    box-shadow: 0 0 0 1px #3498db;
-    border: 1px dashed #3498db;
+    border: 2px dashed #3498db;
     border-left: 3px solid #3498db;
-    border-radius: 5px
+    border-radius: 7px
 }
 
 .source-link {
