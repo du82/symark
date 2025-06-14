@@ -1681,7 +1681,17 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
 
                 // Limit excerpt length
                 if excerpt.len() > 300 {
-                    excerpt = excerpt[0..300].to_string();
+                    // Ensure we cut at a character boundary
+                    let mut end_index = 0;
+                    let mut char_count = 0;
+                    for (idx, _) in excerpt.char_indices() {
+                        end_index = idx;
+                        char_count += 1;
+                        if char_count >= 300 {
+                            break;
+                        }
+                    }
+                    excerpt = excerpt[0..end_index].to_string();
                     excerpt.push_str("...");
                 }
 
