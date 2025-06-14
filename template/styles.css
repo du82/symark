@@ -134,7 +134,6 @@ a {
     color: var(--link-color);
     text-decoration: underline;
     text-underline-offset: 2px;
-    padding: 0 1px;
     transition: color 0.2s ease;
 }
 
