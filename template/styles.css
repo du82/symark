@@ -262,6 +262,10 @@ a {
     color: var(--text-secondary);
 }
 
+.article-content p:last-of-type {
+    margin-bottom: 0;
+}
+
 /* Lists */
 .article-content ul,
 .article-content ol {
