@@ -1533,6 +1533,53 @@ fn render_blocks(
             "NodeBr" => {
                 html.push_str("<br>");
             },
+            "NodeBlockQueryEmbed" => {
+                // Process block query embed (transclusion)
+                // First, find the NodeBlockQueryEmbedScript child that contains the query
+                if let Some(script_block) = block.Children.iter().find(|child| child.Type == "NodeBlockQueryEmbedScript") {
+                    // Extract the block ID from the query
+                    // The query format is typically: "select * from blocks where id='BLOCK_ID'"
+                    if let Some(id_start) = script_block.Data.find("id='") {
+                        let id_start = id_start + 4; // Skip "id='"
+                        if let Some(id_end) = script_block.Data[id_start..].find('\'') {
+                            let content_id = &script_block.Data[id_start..id_start + id_end];
+                            
+                            // Create a div wrapper for the transcluded content
+                            html.push_str("<div class=\"transcluded-block\" style=\"border-left: 3px solid #3498db; padding-left: 10px; margin: 10px 0;\">");
+                            
+                            // Check if this is a block ID or a note ID
+                            let mut found = false;
+                            
+                            // First try to find the specific block by ID
+                            for note in notes_map.values() {
+                                if let Some(found_block) = find_block_by_id(content_id, &note.Children) {
+                                    html.push_str(&render_block(found_block, notes_map, id_to_path));
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            
+                            // If not found as a block, check if it's a note ID
+                            if !found {
+                                if let Some(note) = notes_map.get(content_id) {
+                                    // Render all blocks from the note
+                                    html.push_str(&render_blocks(&note.Children, notes_map, id_to_path));
+                                    found = true;
+                                }
+                            }
+                            
+                            if !found {
+                                html.push_str(&format!("<p><em>Transcluded content not found: {}</em></p>", content_id));
+                            }
+                            
+                            html.push_str("</div>");
+                        }
+                    }
+                } else {
+                    // Fallback - just render children
+                    html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
+                }
+            },
             _ => {
                 // For unhandled node types, just render their children
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
@@ -1766,6 +1813,48 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
     }
 
     html
+}
+
+fn find_block_by_id<'a>(block_id: &str, blocks: &'a [Block]) -> Option<&'a Block> {
+    // First check if any block at this level has the ID
+    if let Some(block) = blocks.iter().find(|b| b.ID == block_id) {
+        return Some(block);
+    }
+    
+    // If not found, recursively check all children
+    for block in blocks {
+        if !block.Children.is_empty() {
+            if let Some(found) = find_block_by_id(block_id, &block.Children) {
+                return Some(found);
+            }
+        }
+    }
+    
+    None
+}
+
+// This function handles finding a block by ID, or an entire note by ID if the block isn't found
+fn find_content_by_id<'a>(
+    id: &str,
+    notes_map: &'a HashMap<String, Note>,
+) -> Option<&'a [Block]> {
+    // First, check if this is a note ID
+    if let Some(note) = notes_map.get(id) {
+        // If it's a note ID, return all its top-level blocks
+        return Some(&note.Children);
+    }
+    
+    // Otherwise, search for the specific block ID in all notes
+    for note in notes_map.values() {
+        if let Some(_) = find_block_by_id(id, &note.Children) {
+            // If we found the block, return it wrapped in a slice
+            // We don't actually need the block itself here, just to know it exists
+            // The actual rendering will be done in the calling function
+            return Some(&note.Children);
+        }
+    }
+    
+    None
 }
 
 fn render_block(
