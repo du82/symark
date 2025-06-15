@@ -1222,8 +1222,13 @@ fn render_blocks(
                 };
                 let layout_type = if layout_type == "row" { "col" } else { "row" };
 
-                // Start container with appropriate class
-                html.push_str(&format!("<div class=\"superblock superblock-{}\">\n", layout_type));
+                // Start container with appropriate class and add ID attribute if available
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+                html.push_str(&format!("<div{} class=\"superblock superblock-{}\">\n", id_attr, layout_type));
 
                 // Get content blocks (exclude markers)
                 let content_blocks: Vec<&Block> = block.Children.iter()
@@ -1303,7 +1308,12 @@ fn render_blocks(
 
                 // Always output the paragraph with its styling, even for images
                 // This allows for centered or aligned images through paragraph styling
-                html.push_str(&format!("<p{}{}>", class_attr, style_attr));
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+                html.push_str(&format!("<p{}{}{}>", id_attr, class_attr, style_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</p>\n");
             },
@@ -1341,9 +1351,15 @@ fn render_blocks(
                     "unordered"
                 };
 
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+
                 match list_type {
-                    "ordered" => html.push_str("<ol>\n"),
-                    _ => html.push_str("<ul>\n"),
+                    "ordered" => html.push_str(&format!("<ol{}>\n", id_attr)),
+                    _ => html.push_str(&format!("<ul{}>\n", id_attr)),
                 }
 
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
@@ -1355,9 +1371,15 @@ fn render_blocks(
             },
             "NodeListItem" => {
                 // Check if this is a task list item
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+
                 if block.Children.iter().any(|child| child.Type == "NodeTaskListItemMarker") {
                     // Make the list item properly positioned
-                    html.push_str("<li style=\"position: relative; padding-left: 30px; margin-bottom: 12px; list-style: none; \">");
+                    html.push_str(&format!("<li{} style=\"position: relative; padding-left: 30px; margin-bottom: 12px; list-style: none; \">", id_attr));
 
                     // Check if the task is checked or unchecked
                     if let Some(task_marker_block) = block.Children.iter().find(|child| child.Type == "NodeTaskListItemMarker") {
@@ -1387,7 +1409,7 @@ fn render_blocks(
                     }
                 } else {
                     // Regular list item
-                    html.push_str("<li>");
+                    html.push_str(&format!("<li{}>", id_attr));
                     
                     // Combine adjacent paragraphs to avoid unnecessary whitespace
                     let mut content = String::new();
@@ -1416,41 +1438,76 @@ fn render_blocks(
                 // This is handled in the NodeListItem case
             },
             "NodeBlockquote" => {
-                html.push_str("<blockquote>");
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+                html.push_str(&format!("<blockquote{}>", id_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</blockquote>\n");
             },
             "NodeThematicBreak" => {
-                html.push_str("<hr>\n");
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+                html.push_str(&format!("<hr{}>\n", id_attr));
             },
             "NodeTable" => {
-                html.push_str("<table>\n");
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+                html.push_str(&format!("<table{}>\n", id_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</table>\n");
             },
             "NodeTableHead" => {
-                html.push_str("<thead>\n");
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+                html.push_str(&format!("<thead{}>\n", id_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</thead>\n");
             },
             "NodeTableRow" => {
-                html.push_str("<tr>\n");
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+                html.push_str(&format!("<tr{}>\n", id_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</tr>\n");
             },
             "NodeTableCell" => {
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
                 if block.Data == "th" {
-                    html.push_str("<th>");
+                    html.push_str(&format!("<th{}>", id_attr));
                     html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                     html.push_str("</th>\n");
                 } else {
-                    html.push_str("<td>");
+                    html.push_str(&format!("<td{}>", id_attr));
                     html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                     html.push_str("</td>\n");
                 }
             },
             "NodeCodeBlock" => {
-                html.push_str("<pre><code");
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+                html.push_str(&format!("<pre{}><code", id_attr));
 
                 // Add language class if available
                 if !block.CodeBlockInfo.is_empty() {
@@ -1476,7 +1533,15 @@ fn render_blocks(
                 html.push_str("</code></pre>\n");
             },
             "NodeText" => {
-                html.push_str(&escape_html(&block.Data));
+                // For text nodes, we generally don't add IDs as they're inline elements,
+                // but we can wrap them in a span with an ID if needed
+                if !block.ID.is_empty() {
+                    html.push_str(&format!("<span id=\"{}\">", block.ID));
+                    html.push_str(&escape_html(&block.Data));
+                    html.push_str("</span>");
+                } else {
+                    html.push_str(&escape_html(&block.Data));
+                }
             },
             "NodeTextMark" => {
                 // Update this line to pass all required arguments
@@ -1488,6 +1553,11 @@ fn render_blocks(
                 let mut alt_text = String::new();
                 let mut style_attr = String::new();
                 let mut parent_style_attr = String::new();
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
 
                 // Find the link destination in children
                 for child in &block.Children {
@@ -1513,16 +1583,31 @@ fn render_blocks(
                 if !image_src.is_empty() {
                     // If parent styling is present, wrap the image in a div with that styling
                     if !parent_style_attr.is_empty() {
-                        html.push_str(&format!("<div{}>", parent_style_attr));
+                        let wrapper_id = if !block.ID.is_empty() {
+                            // If we have an ID, use it for the wrapper instead of the img
+                            format!(" id=\"{}\"", block.ID)
+                        } else {
+                            String::new()
+                        };
+                        html.push_str(&format!("<div{}{}>", wrapper_id, parent_style_attr));
+                        
+                        // In this case, don't add the ID to the img tag since it's on the wrapper
+                        html.push_str(&format!(
+                            "<img src=\"{}\" alt=\"{}\"{}/>",
+                            image_src,
+                            alt_text,
+                            style_attr
+                        ));
+                    } else {
+                        // No wrapper, add ID directly to the img tag
+                        html.push_str(&format!(
+                            "<img{} src=\"{}\" alt=\"{}\"{}/>",
+                            id_attr,
+                            image_src,
+                            alt_text,
+                            style_attr
+                        ));
                     }
-                    
-                    // Render the image with its style
-                    html.push_str(&format!(
-                        "<img src=\"{}\" alt=\"{}\"{}/>",
-                        image_src,
-                        alt_text,
-                        style_attr
-                    ));
                     
                     // Close the parent div if it was opened
                     if !parent_style_attr.is_empty() {
@@ -1531,7 +1616,12 @@ fn render_blocks(
                 }
             },
             "NodeBr" => {
-                html.push_str("<br>");
+                let id_attr = if !block.ID.is_empty() {
+                    format!(" id=\"{}\"", block.ID)
+                } else {
+                    String::new()
+                };
+                html.push_str(&format!("<br{}>", id_attr));
             },
             "NodeBlockQueryEmbed" => {
                 // Process block query embed (transclusion)
@@ -1545,7 +1635,12 @@ fn render_blocks(
                             let content_id = &script_block.Data[id_start..id_start + id_end];
                             
                             // Create a div wrapper for the transcluded content
-                            html.push_str("<div class=\"transcluded-block\">");
+                            let wrapper_id = if !block.ID.is_empty() {
+                                format!(" id=\"{}\"", block.ID)
+                            } else {
+                                String::new()
+                            };
+                            html.push_str(&format!("<div{} class=\"transcluded-block\">", wrapper_id));
                             
                             // Add source link button
                             let source_url = if notes_map.contains_key(content_id) {
@@ -1610,11 +1705,17 @@ fn render_blocks(
 
 fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path: &HashMap<String, PathBuf>) -> String {
     let mut html = String::new();
+    let id_attr = if !block.ID.is_empty() {
+        format!(" id=\"{}\"", block.ID)
+    } else {
+        String::new()
+    };
 
     match block.TextMarkType.as_str() {
         "a" => {
             html.push_str(&format!(
-                "<a href=\"{}\" target=\"_blank\" class=\"link\">{}",
+                "<a{} href=\"{}\" target=\"_blank\" class=\"link\">{}",
+                id_attr,
                 block.TextMarkAHref,
                 block.TextMarkTextContent
             ));
@@ -1622,7 +1723,8 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
         },
         "code" => {
             html.push_str(&format!(
-                "<code>{}",
+                "<code{}>{}",
+                id_attr,
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</code>");
@@ -1635,68 +1737,77 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
             if !block.Properties.style.is_empty() {
                 if let Some(class_name) = get_style_class(&block.Properties.style, true) {
                     html.push_str(&format!(
-                        "<strong class=\"{}\">{}",
+                        "<strong{} class=\"{}\">{}",
+                        id_attr,
                         class_name,
                         content
                     ));
                 } else {
                     // Use inline style for custom colors
                     html.push_str(&format!(
-                        "<strong style=\"{}\">{}",
+                        "<strong{} style=\"{}\">{}",
+                        id_attr,
                         block.Properties.style,
                         content
                     ));
                 }
             } else {
-                html.push_str(&format!("<strong>{}", content));
+                html.push_str(&format!("<strong{}>{}", id_attr, content));
             }
             html.push_str("</strong>");
         },
         "em" => {
             html.push_str(&format!(
-                "<em>{}",
+                "<em{}>{}",
+                id_attr,
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</em>");
         },
         "u" => {
             html.push_str(&format!(
-                "<u>{}",
+                "<u{}>{}",
+                id_attr,
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</u>");
         },
         "s" => {
             html.push_str(&format!(
-                "<s>{}",
+                "<s{}>{}",
+                id_attr,
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</s>");
         },
         "sub" => {
             html.push_str(&format!(
-                "<sub>{}",
+                "<sub{}>{}",
+                id_attr,
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</sub>");
         },
         "sup" => {
             html.push_str(&format!(
-                "<sup>{}",
+                "<sup{}>{}",
+                id_attr,
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</sup>");
         },
         "kbd" => {
             html.push_str(&format!(
-                "<kbd>{}",
+                "<kbd{}>{}",
+                id_attr,
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</kbd>");
         },
         "mark" => {
             html.push_str(&format!(
-                "<mark>{}",
+                "<mark{}>{}",
+                id_attr,
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</mark>");
@@ -1710,16 +1821,18 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 
                 if let Some(class_name) = get_style_class(&block.Properties.style, true) {
                     html.push_str(&format!(
-                        "{} class=\"{}\">{}",
+                        "{}{} class=\"{}\">{}",
                         tag_open,
+                        id_attr,
                         class_name,
                         content
                     ));
                 } else {
                     // Use inline style for custom colors
                     html.push_str(&format!(
-                        "{} style=\"{}\">{}",
+                        "{}{} style=\"{}\">{}",
                         tag_open,
+                        id_attr,
                         block.Properties.style,
                         content
                     ));
@@ -1731,7 +1844,8 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
         },
         "tag" => {
             html.push_str(&format!(
-                "<a href=\"tag_{}.html\" class=\"tag\"># {}",
+                "<a{} href=\"tag_{}.html\" class=\"tag\"># {}",
+                id_attr,
                 block.TextMarkTextContent.replace(" ", "_"),
                 block.TextMarkTextContent
             ));
@@ -1740,14 +1854,16 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
         "inline-math" => {
             // Just preserve the math content in a specially styled span
             html.push_str(&format!(
-                "<span class=\"math-inline\">{}</span>",
+                "<span{} class=\"math-inline\">{}</span>",
+                id_attr,
                 escape_html(&block.TextMarkTextContent)
             ));
         }
         "inline-memo" => {
             // Use HTML title attribute for inline memos
             html.push_str(&format!(
-                "<span title=\"{}\">{}",
+                "<span{} title=\"{}\">{}",
+                id_attr,
                 escape_html(&block.TextMarkInlineMemoContent),
                 escape_html(&block.TextMarkTextContent)
             ));
@@ -1805,7 +1921,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 }
 
                 // Create tooltip HTML
-                html.push_str("<span class=\"tooltip\">");
+                html.push_str(&format!("<span{} class=\"tooltip\">", id_attr));
                 html.push_str(&format!(
                     "<a href=\"{}.html\">{}",
                     block.TextMarkBlockRefID,
@@ -1818,7 +1934,8 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 html.push_str("<i></i></span></span>");
             } else {
                 html.push_str(&format!(
-                    "<span title=\"Missing reference: {}\">{}",
+                    "<span{} title=\"Missing reference: {}\">{}",
+                    id_attr,
                     block.TextMarkBlockRefID,
                     escape_html(&block.TextMarkTextContent)
                 ));
