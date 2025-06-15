@@ -324,24 +324,20 @@ fn filter_index_tag(tags_str: &str) -> String {
 }
 
 fn main() -> std::io::Result<()> {
-    // Start the timer
     let start_time = Instant::now();
     let mut page_count = 0;
     
     println!("Starting SyMark generator...");
 
-    // Create template directory if it doesn't exist
     let template_dir = PathBuf::from("template");
     println!("Template directory: {:?}", template_dir);
     if !template_dir.exists() {
         println!("Creating template directory...");
         fs::create_dir_all(&template_dir)?;
 
-        // Templates will be written here (using the existing ones)
         let html_template = read_template("template/page.html");
         let css_template = read_template("template/styles.css");
 
-        // Write templates to files if needed - clean them of zero-width spaces
         let cleaned_html_template = remove_zero_width_spaces(&html_template);
         let mut html_file = File::create(template_dir.join("page.html"))?;
         html_file.write_all(cleaned_html_template.as_bytes())?;
@@ -353,7 +349,6 @@ fn main() -> std::io::Result<()> {
         println!("Created template files in {:?}", template_dir);
     }
 
-    // Create the output directory
     let output_dir = PathBuf::from("output");
     println!("Output directory: {:?}", output_dir);
     if output_dir.exists() {
@@ -363,19 +358,15 @@ fn main() -> std::io::Result<()> {
     println!("Creating output directory...");
     fs::create_dir_all(&output_dir)?;
 
-    // Create assets directory in output
     let assets_dir = output_dir.join("assets");
     println!("Assets directory: {:?}", assets_dir);
     fs::create_dir_all(&assets_dir)?;
 
-    // Find and copy all asset directories
     println!("Finding and copying assets...");
     find_and_copy_assets(Path::new("input"), &assets_dir)?;
 
-    // Write CSS file to output directory
     println!("Reading CSS template...");
     let css_template = read_template("template/styles.css");
-    // CSS files may also contain zero-width spaces, so clean them too
     let cleaned_css = remove_zero_width_spaces(&css_template);
     let css_path = output_dir.join("styles.css");
     println!("Writing CSS to: {:?}", css_path);
@@ -636,7 +627,6 @@ fn generate_custom_index_page(
     html = html.replace("{{next_article_title}}", "");
     html = html.replace("{{back_navigation}}", "");
 
-    // Generate table of contents
     let mut toc_items = Vec::new();
     let mut id_counter = 0;
     extract_toc_items(&note.Children, &mut toc_items, &mut id_counter);
@@ -644,10 +634,8 @@ fn generate_custom_index_page(
     let toc_html = generate_toc_html(&toc_items);
     html = html.replace("{{table_of_contents}}", &toc_html);
 
-    // Render the custom content from the note
     let content = render_blocks_with_ids(&note.Children, notes_map, id_to_path);
 
-    // Add a link to the all notes page at the end of the content
     let content_with_link = format!(
         "{}\n<div class=\"all-notes-link\"><a href=\"all.html\">View All Notes</a></div>",
         content
@@ -824,7 +812,6 @@ fn generate_index_page(
     html = html.replace("{{site_name}}", "Notes Collection");
     html = html.replace("{{meta_description}}", "Collection of all notes");
     
-    // No header image for index page
     html = html.replace("{{#header_image}}", "<!-- ");
     html = html.replace("{{/header_image}}", " -->");
     html = html.replace("{{blog_description}}", "A collection of all notes");
@@ -832,7 +819,6 @@ fn generate_index_page(
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
     
-    // Simple format for the index page
     let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
     html = html.replace("{{last_updated_date}}", &formatted_date);
     
@@ -925,11 +911,25 @@ fn generate_tag_page(
     all_tags: &HashSet<String>,
     html_template: &str,
 ) -> std::io::Result<()> {
+    // Count notes with this tag (we already calculated this above)
+        
     let mut html = html_template.replace("{{title}}", &format!("Tag: {}", tag));
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "Notes Collection");
-    html = html.replace("{{meta_description}}", &format!("Notes tagged with {}", tag));
-    html = html.replace("{{blog_description}}", &format!("Notes tagged with {}", tag));
+    // Filter notes with this tag for meta description and TOC
+    let tagged_notes: Vec<&Note> = notes_map.values()
+        .filter(|n| n.Properties.tags.split(',').any(|t| t.trim() == tag))
+        .collect();
+    let note_count = tagged_notes.len();
+    
+    let meta_description = if note_count == 1 {
+        format!("1 note has the tag \"{}\"", tag)
+    } else {
+        format!("{} notes have the tag \"{}\"", note_count, tag)
+    };
+    
+    html = html.replace("{{meta_description}}", &meta_description);
+    html = html.replace("{{blog_description}}", &meta_description);
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
     
@@ -958,7 +958,11 @@ fn generate_tag_page(
 
     toc_items.push(TocItem {
         id: "section-tagged-notes".to_string(),
-        text: format!("Notes Tagged with \"{}\"", tag),
+        text: if tagged_notes.len() == 1 {
+            format!("1 note has the tag \"{}\"", tag)
+        } else {
+            format!("{} notes have the tag \"{}\"", tagged_notes.len(), tag)
+        },
         level: 2,
     });
 
@@ -978,28 +982,136 @@ fn generate_tag_page(
     let mut tags_html = String::new();
     for t in tags {
         let class = if t == tag { "tag active" } else { "tag" };
+        
+        // Count notes with this tag
+        let tag_notes: Vec<&Note> = notes_map.values()
+            .filter(|n| n.Properties.tags.split(',').any(|tag| tag.trim() == *t))
+            .collect();
+        let tag_count = tag_notes.len();
+            
+        let mut tooltip_text = if tag_count == 1 {
+            format!("1 note has the tag \"{}\"", t)
+        } else {
+            format!("{} notes have the tag \"{}\"", tag_count, t)
+        };
+        
+        // Add titles of up to 3 notes in the tooltip
+        if !tag_notes.is_empty() {
+            tooltip_text.push_str(": ");
+            let note_titles: Vec<String> = tag_notes.iter()
+                .take(3)
+                .map(|n| format!("\"{}\"", n.Properties.title))
+                .collect();
+                
+            tooltip_text.push_str(&note_titles.join(", "));
+            
+            if tag_count > 3 {
+                tooltip_text.push_str(", ...");
+            }
+        }
+        
         tags_html.push_str(&format!(
-            "<a href=\"tag_{}.html\" class=\"{}\">{}</a>\n",
+            "<span class=\"tooltip\"><a href=\"tag_{}.html\" class=\"{}\">{}</a><span class=\"right bottom\"><span class=\"tooltip-excerpt\">{}</span><i></i></span></span>\n",
             t.replace(" ", "_"),
             class,
-            t
+            t,
+            tooltip_text
         ));
     }
 
-    // Generate content
+    // Process notes with this tag
     let mut content = format!("<ul>");
-
-    // Filter notes with this tag
-    let mut tagged_notes = Vec::new();
-    for note in &sorted_notes {
-        if note.Properties.tags.split(',').any(|t| t.trim() == tag) {
-            tagged_notes.push(note);
-            content.push_str(&format!(
-                "<li><a href=\"{}.html\">{}</a>\n",
-                note.ID,
-                note.Properties.title
-            ));
-        }
+    for note in &tagged_notes {
+        // Get excerpt from note content for tooltip
+        let excerpt = {
+            // First, look for the first paragraph with actual content
+            let mut content_text = String::new();
+            
+            // Process blocks to find meaningful content
+            for block in &note.Children {
+                // Find the first paragraph with actual content
+                if block.Type == "P" && !block.Data.is_empty() {
+                    content_text = escape_html(&block.Data);
+                    
+                    // If it's a short paragraph, try to get more content
+                    if content_text.len() < 120 && note.Children.len() > 1 {
+                        // Look for a second paragraph
+                        for second_block in &note.Children {
+                            if second_block.ID != block.ID && second_block.Type == "P" && !second_block.Data.is_empty() {
+                                content_text.push_str(" ");
+                                content_text.push_str(&escape_html(&second_block.Data));
+                                break;
+                            }
+                        }
+                    }
+                    
+                    break;
+                }
+            }
+            
+            // If we didn't find a paragraph, look for any text in the first few blocks
+            if content_text.is_empty() {
+                for block in note.Children.iter().take(3) {
+                    if !block.Data.is_empty() {
+                        content_text = escape_html(&block.Data);
+                        break;
+                    }
+                    
+                    // Check children if this block has no direct content
+                    if block.Children.len() > 0 {
+                        for child in &block.Children {
+                            if !child.Data.is_empty() {
+                                content_text = escape_html(&child.Data);
+                                break;
+                            }
+                        }
+                        if !content_text.is_empty() {
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Limit to ~200 chars and add ellipsis
+            if content_text.len() > 200 {
+                let mut truncate_pos = 200;
+                // Find a good breakpoint (space or punctuation)
+                while truncate_pos > 150 {
+                    if content_text.chars().nth(truncate_pos).map_or(false, |c| c == ' ' || c == '.' || c == ',' || c == ';') {
+                        break;
+                    }
+                    truncate_pos -= 1;
+                }
+                content_text.truncate(truncate_pos);
+                content_text.push_str("...");
+            }
+            
+            if !content_text.is_empty() {
+                content_text
+            } else {
+                // If no content found, use tags as fallback
+                let tags = note.Properties.tags.split(',')
+                    .map(|t| t.trim())
+                    .filter(|t| !t.is_empty())
+                    .collect::<Vec<_>>();
+                
+                if !tags.is_empty() {
+                    format!("Tagged with: {}", tags.join(", "))
+                } else {
+                    // Last resort: use title
+                    note.Properties.title.clone()
+                }
+            }
+        };
+        
+        // Create tooltip with title and excerpt
+        content.push_str(&format!(
+            "<li><span class=\"tooltip\"><a href=\"{}.html\">{}</a><span class=\"right bottom\"><span class=\"tooltip-title\">{}</span><span class=\"tooltip-excerpt\">{}</span><i></i></span></span>\n",
+            note.ID,
+            note.Properties.title,
+            note.Properties.title,
+            excerpt
+        ));
     }
 
     content.push_str("</ul>");
@@ -1214,7 +1326,6 @@ fn render_blocks(
         match block.Type.as_str() {
 
             "NodeSuperBlock" => {
-                // Extract layout type
                 let layout_type = if let Some(layout_marker) = block.Children.iter().find(|child| child.Type == "NodeSuperBlockLayoutMarker") {
                     layout_marker.Data.as_str()
                 } else {
@@ -1222,7 +1333,6 @@ fn render_blocks(
                 };
                 let layout_type = if layout_type == "row" { "col" } else { "row" };
 
-                // Start container with appropriate class and add ID attribute if available
                 let id_attr = if !block.ID.is_empty() {
                     format!(" id=\"{}\"", block.ID)
                 } else {
@@ -1230,7 +1340,6 @@ fn render_blocks(
                 };
                 html.push_str(&format!("<div{} class=\"superblock superblock-{}\">\n", id_attr, layout_type));
 
-                // Get content blocks (exclude markers)
                 let content_blocks: Vec<&Block> = block.Children.iter()
                     .filter(|child|
                         child.Type != "NodeSuperBlockOpenMarker" &&
@@ -1238,19 +1347,16 @@ fn render_blocks(
                         child.Type != "NodeSuperBlockCloseMarker")
                     .collect();
 
-                // Find any nested superblocks first
                 let nested_superblocks: Vec<&Block> = content_blocks.iter()
                     .filter(|b| b.Type == "NodeSuperBlock")
                     .cloned()
                     .collect();
 
-                // If we have a row layout with nested superblocks - render them directly
                 if layout_type == "row" && !nested_superblocks.is_empty() {
                     for nested in &nested_superblocks {
                         html.push_str(&render_block(nested, notes_map, id_to_path));
                     }
 
-                    // Also render any non-superblock content directly
                     let other_blocks: Vec<&Block> = content_blocks.iter()
                         .filter(|b| b.Type != "NodeSuperBlock")
                         .cloned()
@@ -1396,10 +1502,8 @@ fn render_blocks(
                             }
                             html.push_str("</span>");
                         } else {
-                            // Unchecked item
                             html.push_str("<span class=\"task-checkbox-unchecked\" style=\"position: absolute; left: 0; top: 2px; display: inline-block; width: 20px; height: 20px; border: 2px solid #bdc3c7; background-color: #ecf0f1; border-radius: 2px;\"></span>");
 
-                            // Filter out the marker from rendering
                             for child in &block.Children {
                                 if child.Type != "NodeTaskListItemMarker" {
                                     html.push_str(&render_block(child, notes_map, id_to_path));
@@ -1408,16 +1512,13 @@ fn render_blocks(
                         }
                     }
                 } else {
-                    // Regular list item
                     html.push_str(&format!("<li{}>", id_attr));
                     
-                    // Combine adjacent paragraphs to avoid unnecessary whitespace
                     let mut content = String::new();
                     let mut last_was_paragraph = false;
                     
                     for child in &block.Children {
                         if child.Type == "NodeParagraph" {
-                            // For consecutive paragraphs, don't add closing and opening p tags
                             if last_was_paragraph {
                                 content.push_str(&render_blocks(&child.Children, notes_map, id_to_path));
                             } else {
@@ -1435,7 +1536,7 @@ fn render_blocks(
                 html.push_str("</li>\n");
             },
             "NodeTaskListItemMarker" => {
-                // This is handled in the NodeListItem case
+                // Skip rendering
             },
             "NodeBlockquote" => {
                 let id_attr = if !block.ID.is_empty() {
@@ -2009,54 +2110,45 @@ fn escape_html(text: &str) -> String {
         .replace("'", "&#39;")
 }
 
-/// Removes zero-width whitespace characters from HTML content
-/// but preserves zero-width joiners used in emoji combinations
+/// Removes zero-width spaces while preserving emoji combinations
 fn remove_zero_width_spaces(html: &str) -> String {
     let mut result = String::with_capacity(html.len());
     let mut chars = html.chars().peekable();
     
     while let Some(c) = chars.next() {
-        // Skip zero-width spaces and other unwanted control characters
         if c == '\u{200B}' || c == '\u{200C}' || c == '\u{2060}' || c == '\u{200E}' || c == '\u{200F}' {
             continue;
         }
-        
-        // Check if this is an emoji character (basic check)
+    
         let is_emoji_start = c >= '\u{1F000}' && c <= '\u{1FFFF}' || 
                              c >= '\u{2600}' && c <= '\u{27BF}' ||
                              c >= '\u{2300}' && c <= '\u{23FF}' ||
                              c >= '\u{2700}' && c <= '\u{27FF}' ||
                              c >= '\u{1F1E6}' && c <= '\u{1F1FF}';
         
-        // Add the current character to the result
         result.push(c);
         
-        // If it's an emoji, preserve any zero-width joiners that follow
         if is_emoji_start {
             while let Some(&next) = chars.peek() {
                 if next == '\u{200D}' {
-                    // Preserve zero-width joiner for emoji combinations
                     result.push(next);
-                    chars.next(); // Consume the peeked character
+                    chars.next();
                     
-                    // Also preserve the next character (part of the combined emoji)
                     if let Some(emoji_part) = chars.next() {
                         result.push(emoji_part);
                         
-                        // Also preserve emoji variation selectors and skin tone modifiers
                         while let Some(&modifier) = chars.peek() {
                             if (modifier >= '\u{1F3FB}' && modifier <= '\u{1F3FF}') || modifier == '\u{FE0F}' {
                                 result.push(modifier);
-                                chars.next(); // Consume the peeked character
+                                chars.next();
                             } else {
                                 break;
                             }
                         }
                     }
                 } else if (next >= '\u{1F3FB}' && next <= '\u{1F3FF}') || next == '\u{FE0F}' {
-                    // Preserve skin tone modifiers and variation selectors
                     result.push(next);
-                    chars.next(); // Consume the peeked character
+                    chars.next();
                 } else {
                     break;
                 }
