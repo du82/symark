@@ -644,39 +644,42 @@ fn generate_custom_index_page(
     html = html.replace("{{content}}", &content_with_link);
 
     // Set metadata
+    // Generate custom index page metadata as a tag cloud
     let mut meta = String::new();
+    
+    // Display creation date as a tag
+    if !created_date.is_empty() {
+        meta.push_str(&format!(
+            "<span class=\"meta-tag date-tag\">Created: {}</span>",
+            naturalize_date(&created_date)
+        ));
+    }
+
+    // Display update date if it's different from creation date
+    if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+        meta.push_str(&format!(
+            "<span class=\"meta-tag date-tag\">Updated: {}</span>",
+            naturalize_date(&note.Properties.updated)
+        ));
+    }
+    
+    // Add tags
     if !note.Properties.tags.is_empty() {
-        meta.push_str("Tags: ");
         let mut tags: Vec<_> = note.Properties.tags.split(',')
             .map(|t| t.trim())
             .filter(|t| *t != "index") // Don't display the "index" tag itself
             .collect();
         tags.sort();
 
-        for (i, tag) in tags.iter().enumerate() {
-            if i > 0 {
-                meta.push_str(", ");
+        for tag in tags {
+            if !tag.is_empty() {
+                meta.push_str(&format!(
+                    "<a href=\"tag_{}.html\" class=\"meta-tag\">{}</a>",
+                    tag.replace(" ", "_"),
+                    tag
+                ));
             }
-            meta.push_str(&format!(
-                "<a href=\"tag_{}.html\" class=\"tag\">{}</a>",
-                tag.replace(" ", "_"),
-                tag
-            ));
         }
-        meta.push_str("<br>");
-    }
-
-    // Display creation date
-    if !created_date.is_empty() {
-        meta.push_str(&format!("Created: {}", naturalize_date(&created_date)));
-    }
-
-    // Display update date if it's different from creation date
-    if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
-        if !created_date.is_empty() {
-            meta.push_str("<br>");
-        }
-        meta.push_str(&format!("Last updated: {}", naturalize_date(&note.Properties.updated)));
     }
 
     html = html.replace("{{note_meta}}", &meta);
@@ -710,9 +713,10 @@ fn generate_all_notes_page(
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
 
-    // Simple format for the all notes page
-    let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
-    html = html.replace("{{last_updated_date}}", &formatted_date);
+    // Create tag cloud metadata for all notes page
+    let meta = format!("<span class=\"meta-tag date-tag\">Created on {}</span>", naturalize_date(&timestamp));
+    html = html.replace("{{note_meta}}", &meta);
+    html = html.replace("{{last_updated_date}}", ""); // Clear this as we're using note_meta
 
     html = html.replace("{{category}}", "Notes");
     html = html.replace("{{next_article_url}}", "#");
@@ -933,14 +937,15 @@ fn generate_tag_page(
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
 
+    // Get current date for tag page generation
     let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
-    html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
+    
+    // Create tag cloud metadata for tag page
+    let meta = format!("<span class=\"meta-tag date-tag\">Created on {}</span>", naturalize_date(&timestamp));
+    html = html.replace("{{note_meta}}", &meta);
+    html = html.replace("{{last_updated_date}}", ""); // Clear this as we're using note_meta
 
-    // Simple format for tag pages
-    let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
-    html = html.replace("{{last_updated_date}}", &formatted_date);
-
-    html = html.replace("{{category}}", "Tag");
+    html = html.replace("{{category}}", "Tags");
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
     html = html.replace("{{back_navigation}}", BACK_NAVIGATION_HTML);
@@ -1223,37 +1228,39 @@ fn generate_html_for_note(
     let content = render_blocks_with_ids(&note.Children, notes_map, id_to_path);
     html = html.replace("{{content}}", &content);
 
-    // Generate note metadata
+    // Generate note metadata as a tag cloud
     let mut meta = String::new();
-    if !note.Properties.tags.is_empty() {
-        meta.push_str("Tags: ");
-        let mut tags: Vec<_> = note.Properties.tags.split(',').map(|t| t.trim()).collect();
-        tags.sort();
-
-        for (i, tag) in tags.iter().enumerate() {
-            if i > 0 {
-                meta.push_str(", ");
-            }
-            meta.push_str(&format!(
-                "<a href=\"tag_{}.html\" class=\"tag\">{}</a>",
-                tag.replace(" ", "_"),
-                tag
-            ));
-        }
-        meta.push_str("<br>");
-    }
-
-    // Display creation date
+    
+    // Display creation date as a tag
     if !created_date.is_empty() {
-        meta.push_str(&format!("Created: {}", naturalize_date(&created_date)));
+        meta.push_str(&format!(
+            "<span class=\"meta-tag date-tag\">Created: {}</span>",
+            naturalize_date(&created_date)
+        ));
     }
 
     // Display update date if it's different from creation date
     if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
-        if !created_date.is_empty() {
-            meta.push_str("<br>");
+        meta.push_str(&format!(
+            "<span class=\"meta-tag date-tag\">Updated: {}</span>",
+            naturalize_date(&note.Properties.updated)
+        ));
+    }
+    
+    // Add tags
+    if !note.Properties.tags.is_empty() {
+        let mut tags: Vec<_> = note.Properties.tags.split(',').map(|t| t.trim()).collect();
+        tags.sort();
+
+        for tag in tags {
+            if !tag.is_empty() {
+                meta.push_str(&format!(
+                    "<a href=\"tag_{}.html\" class=\"meta-tag\">{}</a>",
+                    tag.replace(" ", "_"),
+                    tag
+                ));
+            }
         }
-        meta.push_str(&format!("Last updated: {}", naturalize_date(&note.Properties.updated)));
     }
 
     html = html.replace("{{note_meta}}", &meta);
