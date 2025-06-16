@@ -104,7 +104,7 @@ fn get_style_class(style: &str, is_inline: bool) -> Option<String> {
     } else {
         return None;
     };
-    
+
     // Modify class name to ensure we get inline styling for text markers
     if is_inline {
         Some(format!("inline-{}", base_class))
@@ -326,7 +326,7 @@ fn filter_index_tag(tags_str: &str) -> String {
 fn main() -> std::io::Result<()> {
     let start_time = Instant::now();
     let mut page_count = 0;
-    
+
     println!("Starting SyMark generator...");
 
     let template_dir = PathBuf::from("template");
@@ -392,7 +392,7 @@ fn main() -> std::io::Result<()> {
             Ok(mut note) => {
                 let id = note.ID.clone(); // Clone the ID before moving the note
                 id_to_path.insert(id.clone(), path.clone());
-                
+
                 // Extract creation date from note ID if it's not set
                 if note.Properties.created.is_empty() && id.len() >= 14 {
                     // Format is YYYYMMDDhhmmss-xxx
@@ -578,7 +578,7 @@ fn generate_custom_index_page(
     } else {
         "Notes Index".to_string()
     };
-    
+
     // Extract creation date from ID if not present in properties
     let created_date = if !note.Properties.created.is_empty() {
         note.Properties.created.clone()
@@ -592,11 +592,11 @@ fn generate_custom_index_page(
 
     let mut html = html_template.replace("{{title}}", &title);
     html = html.replace("{{css_path}}", "styles.css");
-    html = html.replace("{{site_name}}", "Notes Collection");
+    html = html.replace("{{site_name}}", "SyMark");
     html = html.replace("{{meta_description}}", &title);
     html = html.replace("{{blog_description}}", "A collection of notes");
     html = html.replace("{{back_navigation}}", "");
-    
+
     // Add header image if it exists
     if !note.Properties.title_img.is_empty() {
         html = html.replace("{{#header_image}}", "");
@@ -611,17 +611,17 @@ fn generate_custom_index_page(
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&created_date));
-    
+
     // Format conditional date string
     let formatted_date = if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
-        format!("Created on {}, updated on {}", 
+        format!("Created on {}, updated on {}",
             naturalize_date(&created_date),
             naturalize_date(&note.Properties.updated))
     } else {
         format!("Created on {}", naturalize_date(&created_date))
     };
     html = html.replace("{{last_updated_date}}", &formatted_date);
-    
+
     html = html.replace("{{category}}", "Notes");
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
@@ -665,12 +665,12 @@ fn generate_custom_index_page(
         }
         meta.push_str("<br>");
     }
-    
+
     // Display creation date
     if !created_date.is_empty() {
         meta.push_str(&format!("Created: {}", naturalize_date(&created_date)));
     }
-    
+
     // Display update date if it's different from creation date
     if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
         if !created_date.is_empty() {
@@ -678,13 +678,13 @@ fn generate_custom_index_page(
         }
         meta.push_str(&format!("Last updated: {}", naturalize_date(&note.Properties.updated)));
     }
-    
+
     html = html.replace("{{note_meta}}", &meta);
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
     // Remove zero-width spaces before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
-    
+
     // Write to file
     let file_path = output_dir.join("index.html");
     let mut file = File::create(&file_path)?;
@@ -703,22 +703,22 @@ fn generate_all_notes_page(
     let mut html = html_template.replace("{{title}}", "All Notes");
     let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
     html = html.replace("{{css_path}}", "styles.css");
-    html = html.replace("{{site_name}}", "Notes Collection");
+    html = html.replace("{{site_name}}", "SyMark");
     html = html.replace("{{meta_description}}", "Collection of all notes");
     html = html.replace("{{blog_description}}", "A collection of all notes");
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
-    
+
     // Simple format for the all notes page
     let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
     html = html.replace("{{last_updated_date}}", &formatted_date);
-    
+
     html = html.replace("{{category}}", "Notes");
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
     html = html.replace("{{back_navigation}}", BACK_NAVIGATION_HTML);
-    
+
     // No header image for all notes page
     html = html.replace("{{#header_image}}", "<!-- ");
     html = html.replace("{{/header_image}}", " -->");
@@ -809,19 +809,19 @@ fn generate_index_page(
     let mut html = html_template.replace("{{title}}", "Notes Index");
     let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
     html = html.replace("{{css_path}}", "styles.css");
-    html = html.replace("{{site_name}}", "Notes Collection");
+    html = html.replace("{{site_name}}", "SyMark");
     html = html.replace("{{meta_description}}", "Collection of all notes");
-    
+
     html = html.replace("{{#header_image}}", "<!-- ");
     html = html.replace("{{/header_image}}", " -->");
     html = html.replace("{{blog_description}}", "A collection of all notes");
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
-    
+
     let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
     html = html.replace("{{last_updated_date}}", &formatted_date);
-    
+
     html = html.replace("{{category}}", "Notes");
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
@@ -912,39 +912,39 @@ fn generate_tag_page(
     html_template: &str,
 ) -> std::io::Result<()> {
     // Count notes with this tag (we already calculated this above)
-        
+
     let mut html = html_template.replace("{{title}}", &format!("Tag: {}", tag));
     html = html.replace("{{css_path}}", "styles.css");
-    html = html.replace("{{site_name}}", "Notes Collection");
+    html = html.replace("{{site_name}}", "SyMark");
     // Filter notes with this tag for meta description and TOC
     let tagged_notes: Vec<&Note> = notes_map.values()
         .filter(|n| n.Properties.tags.split(',').any(|t| t.trim() == tag))
         .collect();
     let note_count = tagged_notes.len();
-    
+
     let meta_description = if note_count == 1 {
         format!("1 note has the tag \"{}\"", tag)
     } else {
         format!("{} notes have the tag \"{}\"", note_count, tag)
     };
-    
+
     html = html.replace("{{meta_description}}", &meta_description);
     html = html.replace("{{blog_description}}", &meta_description);
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
-    
+
     let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
     html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
-    
+
     // Simple format for tag pages
     let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
     html = html.replace("{{last_updated_date}}", &formatted_date);
-    
+
     html = html.replace("{{category}}", "Tag");
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
     html = html.replace("{{back_navigation}}", BACK_NAVIGATION_HTML);
-    
+
     // No header image for tag pages
     html = html.replace("{{#header_image}}", "<!-- ");
     html = html.replace("{{/header_image}}", " -->");
@@ -982,19 +982,19 @@ fn generate_tag_page(
     let mut tags_html = String::new();
     for t in tags {
         let class = if t == tag { "tag active" } else { "tag" };
-        
+
         // Count notes with this tag
         let tag_notes: Vec<&Note> = notes_map.values()
             .filter(|n| n.Properties.tags.split(',').any(|tag| tag.trim() == *t))
             .collect();
         let tag_count = tag_notes.len();
-            
+
         let mut tooltip_text = if tag_count == 1 {
             format!("1 note has the tag \"{}\"", t)
         } else {
             format!("{} notes have the tag \"{}\"", tag_count, t)
         };
-        
+
         // Add titles of up to 3 notes in the tooltip
         if !tag_notes.is_empty() {
             tooltip_text.push_str(": ");
@@ -1002,14 +1002,14 @@ fn generate_tag_page(
                 .take(3)
                 .map(|n| format!("\"{}\"", n.Properties.title))
                 .collect();
-                
+
             tooltip_text.push_str(&note_titles.join(", "));
-            
+
             if tag_count > 3 {
                 tooltip_text.push_str(", ...");
             }
         }
-        
+
         tags_html.push_str(&format!(
             "<span class=\"tooltip\"><a href=\"tag_{}.html\" class=\"{}\">{}</a><span class=\"right bottom\"><span class=\"tooltip-excerpt\">{}</span><i></i></span></span>\n",
             t.replace(" ", "_"),
@@ -1026,13 +1026,13 @@ fn generate_tag_page(
         let excerpt = {
             // First, look for the first paragraph with actual content
             let mut content_text = String::new();
-            
+
             // Process blocks to find meaningful content
             for block in &note.Children {
                 // Find the first paragraph with actual content
                 if block.Type == "P" && !block.Data.is_empty() {
                     content_text = escape_html(&block.Data);
-                    
+
                     // If it's a short paragraph, try to get more content
                     if content_text.len() < 120 && note.Children.len() > 1 {
                         // Look for a second paragraph
@@ -1044,11 +1044,11 @@ fn generate_tag_page(
                             }
                         }
                     }
-                    
+
                     break;
                 }
             }
-            
+
             // If we didn't find a paragraph, look for any text in the first few blocks
             if content_text.is_empty() {
                 for block in note.Children.iter().take(3) {
@@ -1056,7 +1056,7 @@ fn generate_tag_page(
                         content_text = escape_html(&block.Data);
                         break;
                     }
-                    
+
                     // Check children if this block has no direct content
                     if block.Children.len() > 0 {
                         for child in &block.Children {
@@ -1071,7 +1071,7 @@ fn generate_tag_page(
                     }
                 }
             }
-            
+
             // Limit to ~200 chars and add ellipsis
             if content_text.len() > 200 {
                 let mut truncate_pos = 200;
@@ -1085,7 +1085,7 @@ fn generate_tag_page(
                 content_text.truncate(truncate_pos);
                 content_text.push_str("...");
             }
-            
+
             if !content_text.is_empty() {
                 content_text
             } else {
@@ -1094,7 +1094,7 @@ fn generate_tag_page(
                     .map(|t| t.trim())
                     .filter(|t| !t.is_empty())
                     .collect::<Vec<_>>();
-                
+
                 if !tags.is_empty() {
                     format!("Tagged with: {}", tags.join(", "))
                 } else {
@@ -1103,7 +1103,7 @@ fn generate_tag_page(
                 }
             }
         };
-        
+
         // Create tooltip with title and excerpt
         content.push_str(&format!(
             "<li><span class=\"tooltip\"><a href=\"{}.html\">{}</a><span class=\"right bottom\"><span class=\"tooltip-title\">{}</span><span class=\"tooltip-excerpt\">{}</span><i></i></span></span>\n",
@@ -1128,7 +1128,7 @@ fn generate_tag_page(
 
     // Remove zero-width spaces before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
-    
+
     // Write to file
     let file_path = output_dir.join(format!("tag_{}.html", tag.replace(" ", "_")));
     let mut file = File::create(&file_path)?;
@@ -1165,11 +1165,11 @@ fn generate_html_for_note(
 
     let mut html = html_template.replace("{{title}}", &title);
     html = html.replace("{{css_path}}", "styles.css");
-    html = html.replace("{{site_name}}", "Notes Collection");
+    html = html.replace("{{site_name}}", "SyMark");
     html = html.replace("{{meta_description}}", &title);
     html = html.replace("{{blog_description}}", "A collection of notes");
     html = html.replace("{{back_navigation}}", BACK_NAVIGATION_HTML);
-    
+
     // Add header image if it exists
     if !note.Properties.title_img.is_empty() {
         html = html.replace("{{#header_image}}", "");
@@ -1185,20 +1185,20 @@ fn generate_html_for_note(
     html = html.replace("{{reading_time}}", "");
 
     html = html.replace("{{author_name}}", "Notes Author");
-    
+
     // Use created date for publish_date
     html = html.replace("{{publish_date}}", &naturalize_date(&created_date));
-    
+
     // Format conditional date string
     let formatted_date = if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
-        format!("Created on {}, updated on {}", 
+        format!("Created on {}, updated on {}",
             naturalize_date(&created_date),
             naturalize_date(&note.Properties.updated))
     } else {
         format!("Created on {}", naturalize_date(&created_date))
     };
     html = html.replace("{{last_updated_date}}", &formatted_date);
-    
+
     html = html.replace("{{category}}", &note.Properties.note_type);
     html = html.replace("{{next_article_url}}", "#");
     html = html.replace("{{next_article_title}}", "");
@@ -1242,12 +1242,12 @@ fn generate_html_for_note(
         }
         meta.push_str("<br>");
     }
-    
+
     // Display creation date
     if !created_date.is_empty() {
         meta.push_str(&format!("Created: {}", naturalize_date(&created_date)));
     }
-    
+
     // Display update date if it's different from creation date
     if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
         if !created_date.is_empty() {
@@ -1255,7 +1255,7 @@ fn generate_html_for_note(
         }
         meta.push_str(&format!("Last updated: {}", naturalize_date(&note.Properties.updated)));
     }
-    
+
     html = html.replace("{{note_meta}}", &meta);
 
     // Set generation date
@@ -1263,7 +1263,7 @@ fn generate_html_for_note(
 
     // Remove zero-width spaces before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
-    
+
     // Write to file
     let file_path = output_dir.join(format!("{}.html", id));
     let mut file = File::create(&file_path)?;
@@ -1409,7 +1409,7 @@ fn render_blocks(
                 }
 
                 // Check if this paragraph contains only an image
-                let contains_only_image = block.Children.len() == 1 && 
+                let contains_only_image = block.Children.len() == 1 &&
                     block.Children[0].Type == "NodeImage";
 
                 // Always output the paragraph with its styling, even for images
@@ -1513,10 +1513,10 @@ fn render_blocks(
                     }
                 } else {
                     html.push_str(&format!("<li{}>", id_attr));
-                    
+
                     let mut content = String::new();
                     let mut last_was_paragraph = false;
-                    
+
                     for child in &block.Children {
                         if child.Type == "NodeParagraph" {
                             if last_was_paragraph {
@@ -1530,7 +1530,7 @@ fn render_blocks(
                             last_was_paragraph = false;
                         }
                     }
-                    
+
                     html.push_str(&content);
                 }
                 html.push_str("</li>\n");
@@ -1691,7 +1691,7 @@ fn render_blocks(
                             String::new()
                         };
                         html.push_str(&format!("<div{}{}>", wrapper_id, parent_style_attr));
-                        
+
                         // In this case, don't add the ID to the img tag since it's on the wrapper
                         html.push_str(&format!(
                             "<img src=\"{}\" alt=\"{}\"{}/>",
@@ -1709,7 +1709,7 @@ fn render_blocks(
                             style_attr
                         ));
                     }
-                    
+
                     // Close the parent div if it was opened
                     if !parent_style_attr.is_empty() {
                         html.push_str("</div>");
@@ -1734,7 +1734,7 @@ fn render_blocks(
                         let id_start = id_start + 4; // Skip "id='"
                         if let Some(id_end) = script_block.Data[id_start..].find('\'') {
                             let content_id = &script_block.Data[id_start..id_start + id_end];
-                            
+
                             // Create a div wrapper for the transcluded content
                             let wrapper_id = if !block.ID.is_empty() {
                                 format!(" id=\"{}\"", block.ID)
@@ -1742,7 +1742,7 @@ fn render_blocks(
                                 String::new()
                             };
                             html.push_str(&format!("<div{} class=\"transcluded-block\">", wrapper_id));
-                            
+
                             // Add source link button
                             let source_url = if notes_map.contains_key(content_id) {
                                 format!("{}.html", content_id) // Link to the note
@@ -1757,12 +1757,12 @@ fn render_blocks(
                                 }
                                 format!("{}.html#{}", source_note_id, content_id) // Link to the note with block ID anchor
                             };
-                            
+
                             html.push_str(&format!("<a href=\"{}\" class=\"source-link\">Go to source</a>", source_url));
-                            
+
                             // Check if this is a block ID or a note ID
                             let mut found = false;
-                            
+
                             // First try to find the specific block by ID
                             for note in notes_map.values() {
                                 if let Some(found_block) = find_block_by_id(content_id, &note.Children) {
@@ -1771,7 +1771,7 @@ fn render_blocks(
                                     break;
                                 }
                             }
-                            
+
                             // If not found as a block, check if it's a note ID
                             if !found {
                                 if let Some(note) = notes_map.get(content_id) {
@@ -1780,12 +1780,12 @@ fn render_blocks(
                                     found = true;
                                 }
                             }
-                            
+
                             if !found {
                                 html.push_str(&format!("<p><em>Transcluded content not found: {}</em></p>", content_id));
                                 // No need to remove the source link with CSS-based approach
                             }
-                            
+
                             html.push_str("</div>");
                         }
                     }
@@ -1818,7 +1818,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 "<a{} href=\"{}\" target=\"_blank\" class=\"link\">{}",
                 id_attr,
                 block.TextMarkAHref,
-                escape_html(&block.TextMarkTextContent)
+                block.TextMarkTextContent
             ));
             html.push_str("</a>");
         },
@@ -1833,7 +1833,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
         "strong" | "strong text" => {
             // Handle both "strong" and "strong text" the same way
             let content = escape_html(&block.TextMarkTextContent);
-            
+
             // Check if there are style properties for special highlights
             if !block.Properties.style.is_empty() {
                 if let Some(class_name) = get_style_class(&block.Properties.style, true) {
@@ -1930,7 +1930,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 let content = escape_html(&block.TextMarkTextContent);
                 let tag_open = if block.TextMarkType == "text strong" { "<strong" } else { "<span" };
                 let tag_close = if block.TextMarkType == "text strong" { "</strong>" } else { "</span>" };
-                
+
                 if let Some(class_name) = get_style_class(&block.Properties.style, true) {
                     html.push_str(&format!(
                         "{}{} class=\"{}\">{}",
@@ -2001,14 +2001,14 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                             // Add line break between paragraphs, not after
                             excerpt.push_str("<br>");
                         }
-                        
+
                         for grandchild in &child.Children {
                             if grandchild.Type == "NodeText" {
                                 excerpt.push_str(&escape_html(&grandchild.Data));
                                 excerpt.push(' ');
                             }
                         }
-                        
+
                         paragraph_count += 1;
                         if paragraph_count >= 2 {
                             break;
@@ -2067,7 +2067,7 @@ fn find_block_by_id<'a>(block_id: &str, blocks: &'a [Block]) -> Option<&'a Block
     if let Some(block) = blocks.iter().find(|b| b.ID == block_id) {
         return Some(block);
     }
-    
+
     // If not found, recursively check all children
     for block in blocks {
         if !block.Children.is_empty() {
@@ -2076,7 +2076,7 @@ fn find_block_by_id<'a>(block_id: &str, blocks: &'a [Block]) -> Option<&'a Block
             }
         }
     }
-    
+
     None
 }
 
@@ -2090,7 +2090,7 @@ fn find_content_by_id<'a>(
         // If it's a note ID, return all its top-level blocks
         return Some(&note.Children);
     }
-    
+
     // Otherwise, search for the specific block ID in all notes
     for note in notes_map.values() {
         if let Some(_) = find_block_by_id(id, &note.Children) {
@@ -2100,7 +2100,7 @@ fn find_content_by_id<'a>(
             return Some(&note.Children);
         }
     }
-    
+
     None
 }
 
@@ -2125,29 +2125,29 @@ fn escape_html(text: &str) -> String {
 fn remove_zero_width_spaces(html: &str) -> String {
     let mut result = String::with_capacity(html.len());
     let mut chars = html.chars().peekable();
-    
+
     while let Some(c) = chars.next() {
         if c == '\u{200B}' || c == '\u{200C}' || c == '\u{2060}' || c == '\u{200E}' || c == '\u{200F}' {
             continue;
         }
-    
-        let is_emoji_start = c >= '\u{1F000}' && c <= '\u{1FFFF}' || 
+
+        let is_emoji_start = c >= '\u{1F000}' && c <= '\u{1FFFF}' ||
                              c >= '\u{2600}' && c <= '\u{27BF}' ||
                              c >= '\u{2300}' && c <= '\u{23FF}' ||
                              c >= '\u{2700}' && c <= '\u{27FF}' ||
                              c >= '\u{1F1E6}' && c <= '\u{1F1FF}';
-        
+
         result.push(c);
-        
+
         if is_emoji_start {
             while let Some(&next) = chars.peek() {
                 if next == '\u{200D}' {
                     result.push(next);
                     chars.next();
-                    
+
                     if let Some(emoji_part) = chars.next() {
                         result.push(emoji_part);
-                        
+
                         while let Some(&modifier) = chars.peek() {
                             if (modifier >= '\u{1F3FB}' && modifier <= '\u{1F3FF}') || modifier == '\u{FE0F}' {
                                 result.push(modifier);
@@ -2166,6 +2166,6 @@ fn remove_zero_width_spaces(html: &str) -> String {
             }
         }
     }
-    
+
     result
 }
