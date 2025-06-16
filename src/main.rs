@@ -1818,7 +1818,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 "<a{} href=\"{}\" target=\"_blank\" class=\"link\">{}",
                 id_attr,
                 block.TextMarkAHref,
-                block.TextMarkTextContent
+                escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</a>");
         },
@@ -1858,12 +1858,23 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
             html.push_str("</strong>");
         },
         "em" => {
-            html.push_str(&format!(
-                "<em{}>{}",
-                id_attr,
-                escape_html(&block.TextMarkTextContent)
-            ));
-            html.push_str("</em>");
+            // Check if this is also a link (has a href)
+            if !block.TextMarkAHref.is_empty() {
+                html.push_str(&format!(
+                    "<a{} href=\"{}\" target=\"_blank\" class=\"link\"><em>{}",
+                    id_attr,
+                    block.TextMarkAHref,
+                    escape_html(&block.TextMarkTextContent)
+                ));
+                html.push_str("</em></a>");
+            } else {
+                html.push_str(&format!(
+                    "<em{}>{}",
+                    id_attr,
+                    escape_html(&block.TextMarkTextContent)
+                ));
+                html.push_str("</em>");
+            }
         },
         "u" => {
             html.push_str(&format!(
