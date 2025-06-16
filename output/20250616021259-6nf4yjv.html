@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How SyMark works | SyMark</title>
+    <link rel="stylesheet" href="styles.css">
+    <meta name="description" content="How SyMark works">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <a href="/" class="site-title">SyMark</a>
+            <div class="header-icons">
+                <a href="#" class="header-icon" title="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </a>
+                <a href="#" class="header-icon" title="Menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </a>
+            </div>
+        </div>
+    </header>
+    <div class="container">
+        <a href="index.html" class="back-link">Back to home<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg></a>
+        <main>
+            <div class="article-header">
+                <!-- 
+                <div class="header-image" style="{{header_image}}"></div>
+                 -->
+                <div class="title-container">
+                    <h1 class="article-title">How SyMark works</h1>
+                </div>
+                <div class="article-meta">
+                    <p>Created on June 16th, 2025, updated on June 16th, 2025</p>
+                </div>
+            </div>
+
+            <div class="article-content">
+                <p id="20250616021322-xuu5wqe">SyMark is simply complexly fascinating software. It runs as a single <code>main.rs</code> file with very few dependencies and is designed to be straightforward and customizable.</p>
+<h2 id="20250616021302-samwihv">Flow of Execution</h2>
+<ol id="20250616021302-jnvh54v">
+<li id="20250616021302-643x02c"><p id="20250616021302-6f8vrr9">The program starts by finding all <code>.sy</code> files (SiYuan&#39;s JSON note format) in a specified <code>input</code> directory using <code>find_sy_files</code></p>
+</li>
+<li id="20250616021302-21bzigj"><p id="20250616021302-fsi8e4r">For each note file:</p>
+<ul id="20250616021302-pcmk662">
+<li id="20250616021302-o11seh7"><p id="20250616021302-yemj28f">Parse the note structure into the <code>Note</code> data structure</p>
+</li>
+<li id="20250616021302-szxdg3h"><p id="20250616021302-2mvm7d3">Extract headings to build a table of contents using <code>extract_toc_items</code></p>
+</li>
+<li id="20250616021302-zcwvr65"><p id="20250616021302-dtow0i9">Generate HTML representation of the note content via <code>generate_html_for_note</code></p>
+<ol id="20250616021302-fddzi75">
+<li id="20250616021302-foh3co2"><p id="20250616021302-2ftwlxu"><strong>Block Type Identification</strong>: The <code>render_blocks</code> function processes each block based on its <code>Type</code> field:</p>
+<ul id="20250616021302-ha4tu1r">
+<li id="20250616021302-x02in0z"><p id="20250616021302-ofwfxt6">Paragraphs</p>
+</li>
+<li id="20250616021302-apqr53c"><p id="20250616021302-4k9ak5p">Headings (with levels 1-6)</p>
+</li>
+<li id="20250616021302-poq57g9"><p id="20250616021302-igodi68">Lists (ordered, unordered, and task lists)</p>
+</li>
+<li id="20250616021302-caco2zt"><p id="20250616021302-8wj3f3l">Code blocks (with syntax highlighting support)</p>
+</li>
+<li id="20250616021302-f8ypjj1"><p id="20250616021302-329f4qf">Tables</p>
+</li>
+<li id="20250616021302-ci4z0f7"><p id="20250616021302-9g04vwx">Blockquotes</p>
+</li>
+<li id="20250616021302-18n73ha"><p id="20250616021302-w4udj9f">HTML blocks</p>
+</li>
+<li id="20250616021302-wqtpwiw"><p id="20250616021302-f1ub7sp">And more specialized types</p>
+</li>
+</ul>
+</li>
+<li id="20250616021302-3mvd8yb"><p id="20250616021302-gtb40wz"><strong>Text Formatting</strong>: Within text blocks, <code>render_text_mark</code> handles:</p>
+<ul id="20250616021302-0a57t4f">
+<li id="20250616021302-n5ig4wj"><p id="20250616021302-bd2x01a">Basic formatting (bold, italic, underline, strikethrough)</p>
+</li>
+<li id="20250616021302-pa6651o"><p id="20250616021302-4329r2b">Links (external URLs and internal references)</p>
+</li>
+<li id="20250616021302-u85wwzm"><p id="20250616021302-atxpzpp">Code spans</p>
+</li>
+<li id="20250616021302-pl4ewei"><p id="20250616021302-upbezmk">Superscript and subscript</p>
+</li>
+<li id="20250616021302-g1i9fjw"><p id="20250616021302-zmquofm">Highlighting</p>
+</li>
+<li id="20250616021302-lgxdcuo"><p id="20250616021302-l7r7av9">Block references (linking to other blocks by ID)</p>
+</li>
+<li id="20250616021302-r116kky"><p id="20250616021302-6duzgsd">Inline memos</p>
+</li>
+</ul>
+</li>
+<li id="20250616021302-6yw37x1"><p id="20250616021302-cmdt38m"><strong>Cross-References</strong>: The system supports references between notes:</p>
+<ul id="20250616021302-xu3mdde">
+<li id="20250616021302-21iv9oi"><p id="20250616021302-uc3vju3"><code>find_block_by_id</code> locates blocks by their unique identifiers</p>
+</li>
+<li id="20250616021302-npqc7wv"><p id="20250616021302-8jwcv4m"><code>find_content_by_id</code> extracts content from referenced blocks</p>
+</li>
+<li id="20250616021302-7olz2kl"><p id="20250616021302-k7w9r7z"><code>NodeBlockQueryEmbed</code> handles transclusions within other notes</p>
+</li>
+<li id="20250616021302-uhe04rh"><p id="20250616021302-uz7qn2x">This enables a wiki-like navigation experience between notes</p>
+</li>
+</ul>
+</li>
+<li id="20250616021302-886w5hu"><p id="20250616021302-oehgj5i"><strong>HTML Safety and SiYuan Compatibility</strong>: Several safeguards ensure the generated HTML is safe and valid:</p>
+<ul id="20250616021302-blsshye">
+<li id="20250616021302-qu4qo0u"><p id="20250616021302-p6gf6ws"><code>escape_html</code> prevents HTML injection in user content</p>
+</li>
+<li id="20250616021302-xgf0ymb"><p id="20250616021302-orsg4vk"><code>remove_zero_width_spaces</code> cleans up text to improve rendering (SiYuan uses zero-width spaces in certain contexts)</p>
+</li>
+<li id="20250616021302-tpbceth"><p id="20250616021302-foe0960"><code>get_style_class</code> translates SiYuan&#39;s custom styling variables into appropriate HTML/CSS classes</p>
+</li>
+<li id="20250616021302-52ds57z"><p id="20250616021302-4vtfexv">Careful handling of nested structures (lists within lists, etc.)</p>
+</li>
+</ul>
+</li>
+<li id="20250616021302-lmhimtp"><p id="20250616021302-6z1bvn8"><strong>Navigation Generation</strong>: For each note, the system:</p>
+<ul id="20250616021302-kd6u743">
+<li id="20250616021302-lxg0nsy"><p id="20250616021302-4nx5srq">Extracts headings to build a table of contents via <code>extract_toc_items</code></p>
+</li>
+<li id="20250616021302-v2nz4g1"><p id="20250616021302-jaypw2x">Generates a hierarchical TOC via <code>generate_toc_html</code></p>
+</li>
+<li id="20250616021302-ippo4d8"><p id="20250616021302-k36we94">Adds a back navigation link (defined in <code>BACK_NAVIGATION_HTML</code>)</p>
+</li>
+<li id="20250616021302-3ic04um"><p id="20250616021302-07plhpn">Creates links to related notes based on tags</p>
+</li>
+</ul>
+</li>
+</ol>
+</li>
+<li id="20250616021302-wzga2ez"><p id="20250616021302-x44mtqe">Create navigation elements (table of contents, links to related notes)</p>
+</li>
+<li id="20250616021302-gbhiori"><p id="20250616021302-qhvhceq">Apply styling and formatting based on note properties</p>
+</li>
+</ul>
+</li>
+<li id="20250616021302-44qt6us"><p id="20250616021302-805ai5n">Generate index pages:</p>
+<ul id="20250616021302-zm3cpun">
+<li id="20250616021302-rnbbjht"><p id="20250616021302-e0r82zd">Main index page via <code>generate_index_page</code></p>
+</li>
+<li id="20250616021302-rz25rjk"><p id="20250616021302-mmfrc8v">Custom index pages via <code>generate_custom_index_page</code></p>
+</li>
+<li id="20250616021302-e7uj4kf"><p id="20250616021302-l94a13r">Tag-based index pages via <code>generate_tag_page</code></p>
+</li>
+<li id="20250616021302-v88sacy"><p id="20250616021302-6jud1w1">Complete note listing via <code>generate_all_notes_page</code></p>
+</li>
+</ul>
+</li>
+<li id="20250616021302-hibdgv1"><p id="20250616021302-pmey370">Copy any associated assets (images, CSS, etc.) using <code>find_and_copy_assets</code> and <code>copy_directory</code></p>
+</li>
+<li id="20250616021302-cyeth3o"><p id="20250616021302-wnzuce4">Copy everything into the specified <code>output</code> directory and log all events in the terminal output</p>
+</li>
+</ol>
+
+            </div>
+        </main>
+    </div>
+</body>
+</html>
