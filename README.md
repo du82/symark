@@ -1,4 +1,4 @@
-<h1 align="center">SyMark - Convert SiYuan notes to webpages</h1>
+<h1 align="center">SyMark - Turn SiYuan notes into webpages</h1>
 SyMark is an open-source static site generator that converts SiYuan notebooks into responsive websites with a single terminal command. Every aspect of your notes—bidirectional links, tags, and all formatting options—renders elegantly on the web, just as it does in the desktop editor.
 
 ![symark](https://github.com/user-attachments/assets/5e5eedc5-412e-4635-a768-64d46e86b75e)
@@ -9,14 +9,14 @@ SyMark processes `.sy` files from SiYuan notebooks and generates a static websit
 
 ## Features
 
-- Converts SiYuan notes to responsive HTML pages
-- Maintains bidirectional links between notes
+- Converts SiYuan notes to responsive HTML webpages
+- Maintains bidirectional links and transclusions between notes
 - Supports tags with dedicated tag pages
 - Automatically generates table of contents
 - Renders markdown formatting, code blocks, and other SiYuan features
 - Custom index page support
 - Zero-width whitespace character removal for clean HTML output
-- Lightning-fast generation even for large notebooks
+- Lightning-fast generation even for large notebooks (1,000,000+ notes)
 - Privacy-focused with no trackers or telemetry
 
 ## Installation
@@ -31,7 +31,7 @@ SyMark processes `.sy` files from SiYuan notebooks and generates a static websit
 1. Extract the archive `NotebookName.sy.zip` into the `input` directory in SyMark
 2. Run SyMark:
    ```sh
-   cargo run --release
+   cargo run
    ```
 
 3. The generated website will be in the `output/` directory
@@ -43,7 +43,7 @@ The program will display information about the generation process, including:
 - Generated HTML files
 - Build time statistics
 
-## Usage
+## Customization & Theming
 
 ### Project Structure
 
@@ -81,22 +81,6 @@ For example, the note "20250506164324-csw026m.sy" in the sample data has the tag
 #### Styling
 
 Customize the appearance by editing `template/styles.css`.
-
-## Note Features
-
-SyMark supports these SiYuan note features:
-
-- Formatted text (bold, italic, etc.)
-- Headings with automatic table of contents
-- Code blocks with syntax highlighting
-- Lists (ordered and unordered)
-- Task lists
-- Tables
-- Block references
-- Images
-- Links (internal and external)
-- Tags
-- Custom styling
 
 ## Tags
 
@@ -137,8 +121,31 @@ SyMark is optimized for speed and can process large notebooks efficiently:
 - Minimal memory footprint suitable for low-end hardware
 
 ## License
+```
+This is free and unencumbered software released into the public domain.
 
-This project is licensed under the terms included in the LICENSE file.
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+```
+For more information, please refer to <https://unlicense.org/>
 
 ## Acknowledgements
 
