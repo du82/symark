@@ -1,8 +1,7 @@
-# SyMark
-
+<h1 align="center">SyMark - Convert SiYuan notes to webpages</h1>
 SyMark is an open-source static site generator that converts SiYuan notebooks into responsive websites with a single terminal command. Every aspect of your notes—bidirectional links, tags, and all formatting options—renders elegantly on the web, just as it does in the desktop editor.
 
-![SyMark Generator](input/assets/image-20250612161004-ljge8nr.png)
+![symark](https://github.com/user-attachments/assets/5e5eedc5-412e-4635-a768-64d46e86b75e)
 
 ## Overview
 
@@ -27,20 +26,22 @@ SyMark processes `.sy` files from SiYuan notebooks and generates a static websit
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
 - SiYuan notebook with exported `.sy` files
 
-### Building from Source
+### Running SyMark
 
-1. Clone this repository:
+1. Extract the archive `NotebookName.sy.zip` into the `input` directory in SyMark
+2. Run SyMark:
    ```sh
-   git clone https://github.com/yourusername/symark.git
-   cd symark
+   cargo run --release
    ```
 
-2. Build the project:
-   ```sh
-   cargo build --release
-   ```
+3. The generated website will be in the `output/` directory
+4. Open `output/index.html` in your browser to view your website
 
-3. The executable will be available at `./target/release/SyMark`
+The program will display information about the generation process, including:
+- Number of notes processed
+- Tags found
+- Generated HTML files
+- Build time statistics
 
 ## Usage
 
@@ -59,48 +60,6 @@ symark/
 │   └── styles.css      # CSS styles for the website
 └── output/             # Generated website (created by SyMark)
 ```
-
-### Input Data Format
-
-SyMark processes `.sy` files, which are JSON files exported from SiYuan. Each `.sy` file represents a note and contains:
-
-- Note metadata (ID, title, tags, creation date, etc.)
-- Note content as a tree of blocks
-- References to other notes
-
-SyMark expects notes to follow the standard SiYuan JSON format with these fields:
-```json
-{
-  "ID": "20250506164324-csw026m",
-  "Spec": "1",
-  "Type": "NodeDocument",
-  "Properties": {
-    "id": "20250506164324-csw026m",
-    "tags": "index,documentation",
-    "title": "Your Note Title",
-    "type": "doc",
-    "updated": "20250612160648"
-  },
-  "Children": [...]
-}
-```
-
-### Running SyMark
-
-1. Ensure your SiYuan notes are in the `input/` directory
-2. Run SyMark:
-   ```sh
-   cargo run --release
-   ```
-
-3. The generated website will be in the `output/` directory
-4. Open `output/index.html` in your browser to view your website
-
-The program will display information about the generation process, including:
-- Number of notes processed
-- Tags found
-- Generated HTML files
-- Build time statistics
 
 ### Templates
 
