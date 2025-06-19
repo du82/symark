@@ -356,13 +356,11 @@ fn main() -> std::io::Result<()> {
     let mut css_file = File::create(&css_path)?;
     css_file.write_all(cleaned_css.as_bytes())?;
 
-    // Find all .sy files in the directory structure
     println!("Finding .sy files...");
     let mut note_files = Vec::new();
     find_sy_files(Path::new("input"), &mut note_files)?;
     println!("Found {} .sy files", note_files.len());
 
-    // Parse all notes and build a map from ID to note
     println!("Parsing notes...");
     let mut notes_map = HashMap::new();
     let mut id_to_path = HashMap::new();
@@ -382,12 +380,10 @@ fn main() -> std::io::Result<()> {
                     note.Properties.created = id[0..14].to_string();
                 }
 
-                // Extract tags from the note - but filter out "index" when adding to all_tags
                 if !note.Properties.tags.is_empty() {
                     for tag in note.Properties.tags.split(',') {
                         let tag = tag.trim().to_string();
 
-                        // Skip adding "index" to all_tags
                         if tag != "index" {
                             all_tags.insert(tag.clone());
                         }
@@ -402,7 +398,6 @@ fn main() -> std::io::Result<()> {
                     }
                 }
 
-                // Add the note to our map
                 notes_map.insert(id, note);
             }
             Err(e) => {
@@ -414,32 +409,29 @@ fn main() -> std::io::Result<()> {
     println!("Reading HTML template...");
     let html_template = read_template("template/page.html");
 
-    // Generate index page first (list of all notes)
+
     if let Some(index_id) = &index_note_id {
         println!("Generating custom index page with ID: {}", index_id);
-        // Use the content of the note with the "index" tag as the index page
+
         generate_custom_index_page(index_id, &notes_map, &id_to_path, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
 
-        // Generate the all notes page at all.html, not at index.html
+
         generate_all_notes_page(&notes_map, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
     } else {
-        // No note with "index" tag found, use the default index page
+
         generate_index_page(&notes_map, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
     }
 
-    // Generate HTML for each note
     println!("Generating HTML for each note...");
     for (id, note) in &notes_map {
-        // Generate HTML files for all notes including the index note
         println!("Generating HTML for note: {}", id);
         generate_html_for_note(id, &notes_map, &id_to_path, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
     }
 
-    // Generate a page for each tag
     println!("Generating tag pages...");
     for tag in &all_tags {
         println!("Generating page for tag: {}", tag);
@@ -447,7 +439,7 @@ fn main() -> std::io::Result<()> {
         page_count += 1;
     }
 
-    // Calculate elapsed time and display build statistics
+
     let elapsed = start_time.elapsed();
     let elapsed_ms = elapsed.as_millis();
 
@@ -458,7 +450,6 @@ fn main() -> std::io::Result<()> {
         println!("✓ Built {} pages in {:.2} s", page_count, elapsed_sec);
     }
 
-    // List the output directory contents
     println!("Checking output directory:");
     match fs::read_dir(&output_dir) {
         Ok(entries) => {
@@ -505,16 +496,14 @@ fn find_and_copy_assets(dir: &Path, output_assets_dir: &Path) -> std::io::Result
     if dir.is_dir() {
         // Check if the current directory is named "assets"
         if dir.file_name().map_or(false, |name| name == "assets") {
-            // Get the relative path component to preserve structure
             let rel_path = dir.file_name().unwrap();
             let target_dir = output_assets_dir;
 
-            // Copy the assets directory contents
             copy_directory(dir, target_dir)?;
             println!("Copied assets from {:?} to {:?}", dir, target_dir);
         }
 
-        // Recurse into subdirectories
+
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -656,13 +645,13 @@ fn generate_custom_index_page(
             &created_date[8..10], &created_date[10..12], &created_date[12..14]);
         html = html.replace("{{og_published_time}}", &og_published_time);
     } else {
-        // For index page without a creation date, use current time
+
         let now = Local::now();
         let og_published_time = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
         html = html.replace("{{og_published_time}}", &og_published_time);
     }
 
-    // Handle OpenGraph modified time if present
+
     if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
         if note.Properties.updated.len() >= 14 {
             let og_modified_time = format!("{}-{}-{}T{}:{}:{}Z",
@@ -691,16 +680,16 @@ fn generate_custom_index_page(
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&created_date));
 
-    // Format conditional date string and handle OpenGraph dates
+
     let formatted_date = if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
-        // Format OpenGraph modified time in ISO 8601 format
+
         if note.Properties.updated.len() >= 14 {
             let og_modified_time = format!("{}-{}-{}T{}:{}:{}Z",
                 &note.Properties.updated[0..4], &note.Properties.updated[4..6], &note.Properties.updated[6..8],
                 &note.Properties.updated[8..10], &note.Properties.updated[10..12], &note.Properties.updated[12..14]);
             html = html.replace("{{og_modified_time}}", &og_modified_time);
         } else {
-            // Remove the modified_time tag if no valid date
+
             html = html.replace("<meta property=\"article:modified_time\" content=\"{{og_modified_time}}\">", "");
         }
 
@@ -736,8 +725,7 @@ fn generate_custom_index_page(
 
     html = html.replace("{{content}}", &content_with_link);
 
-    // Set metadata
-    // Generate custom index page metadata as a tag cloud
+
     let mut meta = String::new();
 
     // Display creation date as a tag
@@ -760,7 +748,7 @@ fn generate_custom_index_page(
     if !note.Properties.tags.is_empty() {
         let mut tags: Vec<_> = note.Properties.tags.split(',')
             .map(|t| t.trim())
-            .filter(|t| *t != "index") // Don't display the "index" tag itself
+            .filter(|t| *t != "index")
             .collect();
         tags.sort();
 
@@ -792,7 +780,7 @@ fn generate_custom_index_page(
     Ok(())
 }
 
-// Renamed function for the all notes page
+
 fn generate_all_notes_page(
     notes_map: &HashMap<String, Note>,
     output_dir: &Path,
@@ -807,7 +795,7 @@ fn generate_all_notes_page(
     // Define site base URL for OpenGraph - this should be configurable in the future
     let site_base_url = "https://du82.github.io/symark";
 
-    // OpenGraph URL - for index page
+
     html = html.replace("{{og_url}}", &format!("{}", site_base_url));
 
     // Set OpenGraph published time in ISO 8601 format
