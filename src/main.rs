@@ -1,3 +1,5 @@
+//! SyMark: Static site generator for SiYuan notes.
+
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::Write;
@@ -7,7 +9,6 @@ use chrono::Local;
 use base64::decode;
 use std::time::Instant;
 
-// Data structures to represent the notes
 #[derive(Debug, Deserialize)]
 struct Note {
     ID: String,
@@ -65,7 +66,6 @@ struct Block {
     #[serde(default)]
     TableAligns: Vec<i32>,
 
-    // Text mark fields
     #[serde(default)]
     TextMarkType: String,
     #[serde(default)]
@@ -79,20 +79,16 @@ struct Block {
     #[serde(default)]
     TextMarkInlineMemoContent: String,
 
-    // Code block fields
     #[serde(default)]
     IsFencedCodeBlock: bool,
     #[serde(default)]
     CodeBlockInfo: String,
 
-    // Checkbox / task list related
     #[serde(default)]
     TaskListItemChecked: bool,
 }
 
-// Helper function to determine if a style should be converted to a special CSS class
 fn get_style_class(style: &str, is_inline: bool) -> Option<String> {
-    // Look for SiYuan's special background and color combinations
     let base_class = if style.contains("var(--b3-card-info-background)") && style.contains("var(--b3-card-info-color)") {
         "info-box"
     } else if style.contains("var(--b3-card-success-background)") && style.contains("var(--b3-card-success-color)") {
@@ -105,7 +101,6 @@ fn get_style_class(style: &str, is_inline: bool) -> Option<String> {
         return None;
     };
 
-    // Modify class name to ensure we get inline styling for text markers
     if is_inline {
         Some(format!("inline-{}", base_class))
     } else {
@@ -113,7 +108,6 @@ fn get_style_class(style: &str, is_inline: bool) -> Option<String> {
     }
 }
 
-// Read HTML and CSS templates from files
 fn read_template(path: &str) -> String {
     match fs::read_to_string(path) {
         Ok(content) => content,
@@ -124,7 +118,6 @@ fn read_template(path: &str) -> String {
     }
 }
 
-// Table of Contents generator
 struct TocItem {
     id: String,
     text: String,
@@ -138,7 +131,6 @@ fn extract_toc_items(blocks: &[Block], headings: &mut Vec<TocItem>, id_counter: 
         if block.Type == "NodeHeading" {
             let level = block.HeadingLevel.max(1).min(6);
 
-            // Generate an ID for the heading if it doesn't have one
             let id = if !block.ID.is_empty() {
                 block.ID.clone()
             } else {
@@ -146,7 +138,6 @@ fn extract_toc_items(blocks: &[Block], headings: &mut Vec<TocItem>, id_counter: 
             };
             *id_counter += 1;
 
-            // Extract the text from the heading's children
             let mut text = String::new();
             for child in &block.Children {
                 if child.Type == "NodeText" {
@@ -163,25 +154,20 @@ fn extract_toc_items(blocks: &[Block], headings: &mut Vec<TocItem>, id_counter: 
             });
         }
 
-        // Recursively check children blocks
         extract_toc_items(&block.Children, headings, id_counter);
     }
 }
 
 fn naturalize_date(date_str: &str) -> String {
-    // Return empty string if input is empty
     if date_str.is_empty() {
         return String::from("Unknown date");
     }
 
-    // Handle YYYYMMDD format with optional time (common SiYuan format)
     if date_str.len() >= 8 && date_str.chars().take(8).all(|c| c.is_digit(10)) {
-        // Extract year, month, and day
         let year = &date_str[0..4];
         let month_num: u32 = date_str[4..6].parse().unwrap_or(1);
         let day: u32 = date_str[6..8].parse().unwrap_or(1);
 
-        // Get month name
         let month_name = match month_num {
             1 => "January",
             2 => "February",
@@ -206,16 +192,13 @@ fn naturalize_date(date_str: &str) -> String {
             _ => format!("{}th", day),
         };
 
-        // Format final output
         let formatted_date = format!("{} {}, {}", month_name, day_with_suffix, year);
 
-        // Add time if present (after 8 characters)
         if date_str.len() > 8 && date_str.chars().nth(8) == Some('T') {
             if date_str.len() >= 14 { // Has at least hour and minute
                 let hour: u32 = date_str[9..11].parse().unwrap_or(0);
                 let minute: u32 = date_str[11..13].parse().unwrap_or(0);
 
-                // Format with AM/PM
                 let hour12 = if hour == 0 {
                     12
                 } else if hour > 12 {
@@ -2435,7 +2418,7 @@ fn comment_processor(html: &str) -> String {
                     if i > 0 {
                         let tag_start = html[..i].rfind('<').unwrap_or(i);
                         let tag_content = &html[tag_start..=i];
-                        
+
                         // Opening tag increases depth
                         if !tag_content.starts_with("</") && !tag_content.ends_with("/>") {
                             depth += 1;
@@ -2470,14 +2453,14 @@ fn comment_processor(html: &str) -> String {
             })
             .cloned()
             .collect();
-        
+
         let weighted_points: Vec<(usize, usize)> = mid_section.iter()
             .flat_map(|(pos, d)| {
                 let weight = d * d; // Square the depth to increase probability for deeper points
                 std::iter::repeat((*pos, *d)).take(weight)
             })
             .collect();
-        
+
         if !weighted_points.is_empty() {
             let seed = html.len() + html.chars().fold(0, |acc, c| acc + c as usize);
             let index_pos = seed % weighted_points.len();
@@ -2490,7 +2473,7 @@ fn comment_processor(html: &str) -> String {
             return result;
         }
     }
-    
+
     let middle_point = html.len() / 2;
     let mut result = String::with_capacity(html.len() + COMMENT.len());
     result.push_str(&html[..middle_point]);
