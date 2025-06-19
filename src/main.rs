@@ -294,6 +294,10 @@ fn generate_toc_html(headings: &[TocItem]) -> String {
         }
     }
 
+    if toc_html.is_empty() {
+        toc_html = "<li class=\"toc-item\"><em>No headings found</em></li>\n".to_string();
+    }
+
     toc_html
 }
 

@@ -17,6 +17,107 @@
     
     <meta property="article:published_time" content="2025-05-06T16:43:24Z">
     <meta property="article:modified_time" content="2025-06-16T02:26:31Z">
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuButton = document.querySelector('.header-icon[title="Table of Contents"]');
+            const tocSidebar = document.getElementById('toc-sidebar');
+            const contentWrapper = document.querySelector('.content-wrapper');
+            const overlay = document.getElementById('toc-overlay');
+            
+            // Add animation delay to TOC items for staggered effect
+            function setupTocAnimation() {
+                const tocItems = document.querySelectorAll('.toc-item');
+                tocItems.forEach((item, index) => {
+                    item.style.setProperty('--item-index', index);
+                });
+            }
+            
+            // Setup TOC animation on page load
+            setupTocAnimation();
+            
+            // Handle TOC item clicks to close sidebar on mobile only
+            function setupTocItemClickHandlers() {
+                const tocLinks = document.querySelectorAll('.toc-link');
+                const isMobile = window.innerWidth <= 768;
+                
+                tocLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        if (isMobile) {
+                            document.body.classList.remove('toc-open');
+                            menuButton.setAttribute('aria-expanded', 'false');
+                            tocSidebar.setAttribute('aria-hidden', 'true');
+                            document.body.style.overflow = '';
+                        }
+                    });
+                });
+            }
+            
+            setupTocItemClickHandlers();
+            
+            // Update on window resize
+            window.addEventListener('resize', function() {
+                setupTocItemClickHandlers();
+                
+                // Reset body overflow on large screens
+                if (window.innerWidth > 768) {
+                    document.body.style.overflow = '';
+                } else if (document.body.classList.contains('toc-open')) {
+                    document.body.style.overflow = 'hidden';
+                }
+            });
+            
+            menuButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                const isOpen = document.body.classList.toggle('toc-open');
+                
+                // Update ARIA attributes for accessibility
+                menuButton.setAttribute('aria-expanded', isOpen);
+                tocSidebar.setAttribute('aria-hidden', !isOpen);
+                
+                // Announce to screen readers
+                const status = isOpen ? 'Table of contents opened' : 'Table of contents closed';
+                
+                // Only prevent scrolling on mobile screens
+                if (isOpen) {
+                    if (window.innerWidth <= 768) {
+                        document.body.style.overflow = 'hidden';
+                    }
+                    
+                    // Reset animation by removing and re-adding classes
+                    const tocItems = document.querySelectorAll('.toc-item');
+                    tocItems.forEach(item => {
+                        item.style.animation = 'none';
+                        item.offsetHeight; // Force reflow
+                        item.style.animation = '';
+                    });
+                } else {
+                    document.body.style.overflow = '';
+                }
+            });
+            
+            overlay.addEventListener('click', function() {
+                document.body.classList.remove('toc-open');
+                menuButton.setAttribute('aria-expanded', 'false');
+                tocSidebar.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            });
+            
+            // Allow keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.body.classList.contains('toc-open')) {
+                    document.body.classList.remove('toc-open');
+                    menuButton.setAttribute('aria-expanded', 'false');
+                    tocSidebar.setAttribute('aria-hidden', 'true');
+                    
+                    // Only reset overflow if on mobile
+                    if (window.innerWidth <= 768) {
+                        document.body.style.overflow = '';
+                    }
+                }
+            });
+        });
+    </script>
 </head>
 <body>
     <header class="site-header">
@@ -26,15 +127,41 @@
                 <a href="#" class="header-icon" title="Search">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </a>
-                <a href="#" class="header-icon" title="Menu">
+                <a href="#" class="header-icon" title="Table of Contents" aria-label="Toggle table of contents" aria-controls="toc-sidebar" aria-expanded="false">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </a>
             </div>
         </div>
     </header>
-    <div class="container">
-        <a href="index.html" class="back-link">Back to home<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg></a>
-        <main>
+    
+    <div id="toc-overlay" role="button" aria-label="Close table of contents"></div>
+    <div id="toc-sidebar" role="navigation" aria-label="Table of contents" aria-hidden="true">
+        <div class="toc-header">
+            <h2>Table of Contents</h2>
+            <button class="toc-close-btn" aria-label="Close table of contents" onclick="document.body.classList.remove('toc-open'); if(window.innerWidth <= 768) document.body.style.overflow = ''; document.querySelector('.header-icon[aria-controls=\'toc-sidebar\']').setAttribute('aria-expanded', 'false'); document.getElementById('toc-sidebar').setAttribute('aria-hidden', 'true');">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <nav class="toc-nav">
+            <ul class="toc-list">
+                <li class="toc-item"><a class="toc-link" href="#20250506170353-52mcfam">⚡ Lightning-Fast</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250506170353-ykqtgox">🎢 Customizable Themes</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250508133819-6aszt5q">💙 Public Domain</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250616021731-t4wvvg5">✏️WYSIWYG Editing</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250614110859-1n88lit">⚙️ Simple and Reliable</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250506170353-94xoddb">😶‍🌫️ Privacy Focused</a></li>
+
+            </ul>
+            <div class="toc-footer">
+                <small>Click headings to navigate</small>
+            </div>
+        </nav>
+    </div>
+    
+    <div class="content-wrapper">
+        <div class="container">
+            <a href="index.html" class="back-link">Back to home<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg></a>
+            <main>
             <div class="article-header">
                 <!-- 
                 <div class="header-image" style=""></div>
@@ -53,7 +180,9 @@
 <div id="20250508144505-1n02ypz" class="superblock superblock-row">
 <div id="20250508144510-uobmuqs" class="superblock superblock-col">
 <h2 id="20250506170353-52mcfam">⚡ Lightning-Fast</h2>
-<p id="20250506170353-o935i2q">Large notebooks are processed in milliseconds, even on low-end hardware. Go check out the <span class="tooltip"><a href="20250508102758-u01h899.html">benchmarks</a><span class="right bottom"><span class="tooltip-title">Benchmarks</span><span class="tooltip-excerpt">Here&#39;s some statistics captured on   with a 3rd Gen Raspberry Pi single board computer. <br></span><i></i></span></span>!</p>
+<p id="20250506170353-o935i2q">Large notebooks are processed in milliseconds, even on low-end hardware. Go check out the <span class="tooltip"><a href="20250508102758-u01h899.html">benchmarks</a><span class="right bottom"><span class="tooltip-title">Benchmarks</span>
+<!-- Generated with SyMark, a static site generator for SiYuan Note. Available at https://github.com/du82/symark -->
+<span class="tooltip-excerpt">Here&#39;s some statistics captured on   with a 3rd Gen Raspberry Pi single board computer. <br></span><i></i></span></span>!</p>
 </div>
 <div id="20250506184806-0mrb7c7" class="superblock superblock-col">
 <h2 id="20250506170353-ykqtgox">🎢 Customizable Themes</h2>
@@ -62,9 +191,7 @@
 </div>
 <div id="20250508150822-czrrgwe" class="superblock superblock-row">
 <div id="20250508143409-frlfbe2" class="superblock superblock-col">
-<h2 id="20250508133819-6aszt5q">💙 
-<!-- Generated with SyMark, a static site generator for SiYuan Note. Available at https://github.com/du82/symark -->
-Public Domain</h2>
+<h2 id="20250508133819-6aszt5q">💙 Public Domain</h2>
 <p id="20250508143253-demsgvb">SyMark is <a href="https://github.com/du82/symark/blob/main/LICENSE" target="_blank" class="link">public domain software</a> and is <span class="tooltip"><a href="20250507101913-9jo95mk.html">built to last</a><span class="right bottom"><span class="tooltip-title">Build software to last</span><span class="tooltip-excerpt">Most software nowadays is built to be fragile; requiring a constant internet connection, licensing servers, and/or other things that can screw up your workflow when they break. This method of buliding software removes agency from the creator and gives control to the company or individual who create...</span><i></i></span></span>. The binary maintains a focused feature set, <span class="tooltip"><a href="20250615054852-jaujqy6.html">no chasing trends</a><span class="right bottom"><span class="tooltip-title">Design philosophy of SyMark</span><span class="tooltip-excerpt">SyMark was created because I (the author) was struggling to write due to complicated build processes with Markdown based static site generators. Thus, the goal of SyMark is to have as little friction between writing and publishing as possible, with a WYSIWYG publishing experience that no Markdown b...</span><i></i></span></span>.</p>
 </div>
 <div id="20250616021754-8rcwuo8" class="superblock superblock-col">
@@ -86,6 +213,7 @@ Public Domain</h2>
 
             </div>
         </main>
+    </div>
     </div>
 </body>
 </html>

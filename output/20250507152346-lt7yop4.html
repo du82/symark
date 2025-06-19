@@ -17,26 +17,148 @@
     
     <meta property="article:published_time" content="2025-05-07T15:23:46Z">
     <meta property="article:modified_time" content="2025-06-14T11:10:56Z">
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuButton = document.querySelector('.header-icon[title="Table of Contents"]');
+            const tocSidebar = document.getElementById('toc-sidebar');
+            const contentWrapper = document.querySelector('.content-wrapper');
+            const overlay = document.getElementById('toc-overlay');
+            
+            // Add animation delay to TOC items for staggered effect
+            function setupTocAnimation() {
+                const tocItems = document.querySelectorAll('.toc-item');
+                tocItems.forEach((item, index) => {
+                    item.style.setProperty('--item-index', index);
+                });
+            }
+            
+            // Setup TOC animation on page load
+            setupTocAnimation();
+            
+            // Handle TOC item clicks to close sidebar on mobile only
+            function setupTocItemClickHandlers() {
+                const tocLinks = document.querySelectorAll('.toc-link');
+                const isMobile = window.innerWidth <= 768;
+                
+                tocLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        if (isMobile) {
+                            document.body.classList.remove('toc-open');
+                            menuButton.setAttribute('aria-expanded', 'false');
+                            tocSidebar.setAttribute('aria-hidden', 'true');
+                            document.body.style.overflow = '';
+                        }
+                    });
+                });
+            }
+            
+            setupTocItemClickHandlers();
+            
+            // Update on window resize
+            window.addEventListener('resize', function() {
+                setupTocItemClickHandlers();
+                
+                // Reset body overflow on large screens
+                if (window.innerWidth > 768) {
+                    document.body.style.overflow = '';
+                } else if (document.body.classList.contains('toc-open')) {
+                    document.body.style.overflow = 'hidden';
+                }
+            });
+            
+            menuButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                const isOpen = document.body.classList.toggle('toc-open');
+                
+                // Update ARIA attributes for accessibility
+                menuButton.setAttribute('aria-expanded', isOpen);
+                tocSidebar.setAttribute('aria-hidden', !isOpen);
+                
+                // Announce to screen readers
+                const status = isOpen ? 'Table of contents opened' : 'Table of contents closed';
+                
+                // Only prevent scrolling on mobile screens
+                if (isOpen) {
+                    if (window.innerWidth <= 768) {
+                        document.body.style.overflow = 'hidden';
+                    }
+                    
+                    // Reset animation by removing and re-adding classes
+                    const tocItems = document.querySelectorAll('.toc-item');
+                    tocItems.forEach(item => {
+                        item.style.animation = 'none';
+                        item.offsetHeight; // Force reflow
+                        item.style.animation = '';
+                    });
+                } else {
+                    document.body.style.overflow = '';
+                }
+            });
+            
+            overlay.addEventListener('click', function() {
+                document.body.classList.remove('toc-open');
+                menuButton.setAttribute('aria-expanded', 'false');
+                tocSidebar.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+            });
+            
+            // Allow keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.body.classList.contains('toc-open')) {
+                    document.body.classList.remove('toc-open');
+                    menuButton.setAttribute('aria-expanded', 'false');
+                    tocSidebar.setAttribute('aria-hidden', 'true');
+                    
+                    // Only reset overflow if on mobile
+                    if (window.innerWidth <= 768) {
+                        document.body.style.overflow = '';
+                    }
+                }
+            });
+        });
+    </script>
 </head>
 <body>
     <header class="site-header">
         <div class="header-content">
-      
-<!-- Generated with SyMark, a static site generator for SiYuan Note. Available at https://github.com/du82/symark -->
-      <a href="index.html" class="site-title">SyMark</a>
+            <a href="index.html" class="site-title">SyMark</a>
             <div class="header-icons">
-                <a href="#" class="header-icon" title="Search">
+ 
+<!-- Generated with SyMark, a static site generator for SiYuan Note. Available at https://github.com/du82/symark -->
+               <a href="#" class="header-icon" title="Search">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </a>
-                <a href="#" class="header-icon" title="Menu">
+                <a href="#" class="header-icon" title="Table of Contents" aria-label="Toggle table of contents" aria-controls="toc-sidebar" aria-expanded="false">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                 </a>
             </div>
         </div>
     </header>
-    <div class="container">
-        <a href="index.html" class="back-link">Back to home<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg></a>
-        <main>
+    
+    <div id="toc-overlay" role="button" aria-label="Close table of contents"></div>
+    <div id="toc-sidebar" role="navigation" aria-label="Table of contents" aria-hidden="true">
+        <div class="toc-header">
+            <h2>Table of Contents</h2>
+            <button class="toc-close-btn" aria-label="Close table of contents" onclick="document.body.classList.remove('toc-open'); if(window.innerWidth <= 768) document.body.style.overflow = ''; document.querySelector('.header-icon[aria-controls=\'toc-sidebar\']').setAttribute('aria-expanded', 'false'); document.getElementById('toc-sidebar').setAttribute('aria-hidden', 'true');">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <nav class="toc-nav">
+            <ul class="toc-list">
+                <li class="toc-item"><em>No headings found</em></li>
+
+            </ul>
+            <div class="toc-footer">
+                <small>Click headings to navigate</small>
+            </div>
+        </nav>
+    </div>
+    
+    <div class="content-wrapper">
+        <div class="container">
+            <a href="index.html" class="back-link">Back to home<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg></a>
+            <main>
             <div class="article-header">
                 <!-- 
                 <div class="header-image" style=""></div>
@@ -109,6 +231,7 @@
 </div>
             </div>
         </main>
+    </div>
     </div>
 </body>
 </html>
