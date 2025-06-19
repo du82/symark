@@ -438,7 +438,7 @@ fn main() -> std::io::Result<()> {
         generate_custom_index_page(index_id, &notes_map, &id_to_path, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
 
-        // Generate the all notes page at all.html
+        // Generate the all notes page at all.html, not at index.html
         generate_all_notes_page(&notes_map, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
     } else {
@@ -450,12 +450,10 @@ fn main() -> std::io::Result<()> {
     // Generate HTML for each note
     println!("Generating HTML for each note...");
     for (id, note) in &notes_map {
-        // Skip generating the individual file for the index note
-        if Some(id.as_str()) != index_note_id.as_deref() {
-            println!("Generating HTML for note: {}", id);
-            generate_html_for_note(id, &notes_map, &id_to_path, &output_dir, &all_tags, &html_template)?;
-            page_count += 1;
-        }
+        // Generate HTML files for all notes including the index note
+        println!("Generating HTML for note: {}", id);
+        generate_html_for_note(id, &notes_map, &id_to_path, &output_dir, &all_tags, &html_template)?;
+        page_count += 1;
     }
 
     // Generate a page for each tag
@@ -593,9 +591,107 @@ fn generate_custom_index_page(
     let mut html = html_template.replace("{{title}}", &title);
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
-    html = html.replace("{{meta_description}}", &title);
+    
+    // Extract a good description for meta and OpenGraph tags
+    let mut description = String::new();
+    let mut paragraph_count = 0;
+    
+    // Process blocks to find meaningful content
+    for block in &note.Children {
+        if block.Type == "NodeParagraph" || block.Type == "Paragraph" {
+            // Only process first few paragraphs
+            if paragraph_count > 0 {
+                description.push(' '); // Add space between paragraphs
+            }
+            
+            // Get text from paragraph
+            let paragraph_content = render_blocks(&block.Children, notes_map, id_to_path);
+            
+            // Strip HTML
+            let mut plain_text = String::new();
+            let mut in_tag = false;
+            
+            for c in paragraph_content.chars() {
+                if c == '<' {
+                    in_tag = true;
+                } else if c == '>' {
+                    in_tag = false;
+                } else if !in_tag {
+                    plain_text.push(c);
+                }
+            }
+            
+            description.push_str(&plain_text);
+            paragraph_count += 1;
+            
+            // Limit to 2-3 paragraphs for description
+            if paragraph_count >= 2 && description.len() > 100 {
+                break;
+            }
+        }
+    }
+    
+    // If no paragraphs found, use title
+    if description.is_empty() {
+        description = title.clone();
+    }
+    
+    // Escape HTML in the description
+    let description = escape_html(&description);
+    
+    // Truncate description if too long (typical limit is around 200 chars)
+    let truncated_description = if description.len() > 200 {
+        // Ensure we cut at a character boundary
+        let mut end_index = 0;
+        let mut char_count = 0;
+        for (idx, _) in description.char_indices() {
+            end_index = idx;
+            char_count += 1;
+            if char_count >= 197 {
+                break;
+            }
+        }
+        format!("{}...", &description[0..end_index])
+    } else {
+        description
+    };
+    
+    html = html.replace("{{meta_description}}", &truncated_description);
     html = html.replace("{{blog_description}}", "A collection of notes");
     html = html.replace("{{back_navigation}}", "");
+    
+    // Define site base URL for OpenGraph - this should be configurable in the future
+    let site_base_url = "https://example.com/";
+    
+    // OpenGraph URL
+    html = html.replace("{{og_url}}", &format!("{}", site_base_url));
+    
+    // Set OpenGraph published time in ISO 8601 format
+    if !created_date.is_empty() && created_date.len() >= 14 {
+        let og_published_time = format!("{}-{}-{}T{}:{}:{}Z", 
+            &created_date[0..4], &created_date[4..6], &created_date[6..8],
+            &created_date[8..10], &created_date[10..12], &created_date[12..14]);
+        html = html.replace("{{og_published_time}}", &og_published_time);
+    } else {
+        // For index page without a creation date, use current time
+        let now = Local::now();
+        let og_published_time = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        html = html.replace("{{og_published_time}}", &og_published_time);
+    }
+    
+    // Handle OpenGraph modified time if present
+    if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+        if note.Properties.updated.len() >= 14 {
+            let og_modified_time = format!("{}-{}-{}T{}:{}:{}Z", 
+                &note.Properties.updated[0..4], &note.Properties.updated[4..6], &note.Properties.updated[6..8],
+                &note.Properties.updated[8..10], &note.Properties.updated[10..12], &note.Properties.updated[12..14]);
+            html = html.replace("{{og_modified_time}}", &og_modified_time);
+        } else {
+            html = html.replace("{{og_modified_time}}", "");
+        }
+    } else {
+        html = html.replace("{{og_modified_time}}", "");
+    }
 
     // Add header image if it exists
     if !note.Properties.title_img.is_empty() {
@@ -612,12 +708,26 @@ fn generate_custom_index_page(
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&created_date));
 
-    // Format conditional date string
+    // Format conditional date string and handle OpenGraph dates
     let formatted_date = if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+        // Format OpenGraph modified time in ISO 8601 format
+        if note.Properties.updated.len() >= 14 {
+            let og_modified_time = format!("{}-{}-{}T{}:{}:{}Z", 
+                &note.Properties.updated[0..4], &note.Properties.updated[4..6], &note.Properties.updated[6..8],
+                &note.Properties.updated[8..10], &note.Properties.updated[10..12], &note.Properties.updated[12..14]);
+            html = html.replace("{{og_modified_time}}", &og_modified_time);
+        } else {
+            // Remove the modified_time tag if no valid date
+            html = html.replace("<meta property=\"article:modified_time\" content=\"{{og_modified_time}}\">", "");
+        }
+        
         format!("Created on {}, updated on {}",
             naturalize_date(&created_date),
             naturalize_date(&note.Properties.updated))
     } else {
+        // If no image, remove the OpenGraph image tag
+        html = html.replace("<meta property=\"og:image\" content=\"{{og_image}}\">", "");
+        
         format!("Created on {}", naturalize_date(&created_date))
     };
     html = html.replace("{{last_updated_date}}", &formatted_date);
@@ -685,13 +795,14 @@ fn generate_custom_index_page(
     html = html.replace("{{note_meta}}", &meta);
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
-    // Remove zero-width spaces before writing to file
+    // Remove zero-width spaces and clean up any remaining template variables
     let cleaned_html = remove_zero_width_spaces(&html);
+    let final_html = cleanup_template_variables(&cleaned_html);
 
     // Write to file
     let file_path = output_dir.join("index.html");
     let mut file = File::create(&file_path)?;
-    file.write_all(cleaned_html.as_bytes())?;
+    file.write_all(final_html.as_bytes())?;
 
     Ok(())
 }
@@ -704,17 +815,38 @@ fn generate_all_notes_page(
     html_template: &str,
 ) -> std::io::Result<()> {
     let mut html = html_template.replace("{{title}}", "All Notes");
-    let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
     html = html.replace("{{meta_description}}", "Collection of all notes");
+    
+    // Define site base URL for OpenGraph - this should be configurable in the future
+    let site_base_url = "https://example.com/";
+    
+    // OpenGraph URL - for index page
+    html = html.replace("{{og_url}}", &format!("{}", site_base_url));
+    
+    // Set OpenGraph published time in ISO 8601 format
+    let now_iso = Local::now();
+    let og_published_time = now_iso.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    html = html.replace("{{og_published_time}}", &og_published_time);
+    
+    // No modified time for all notes page
+    html = html.replace("{{og_modified_time}}", "");
+    
+    // Remove OpenGraph image tag if no image
+    html = html.replace("<meta property=\"og:image\" content=\"{{og_image}}\">", "");
     html = html.replace("{{blog_description}}", "A collection of all notes");
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
-    html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
+    
+    // Use current timestamp for publish date
+    let now = Local::now().format("%Y%m%d%H%M%S").to_string();
+    html = html.replace("{{publish_date}}", &naturalize_date(&now));
 
+    let formatted_date = format!("Created on {}", naturalize_date(&now));
+    html = html.replace("{{last_updated_date}}", &formatted_date);
     // Create tag cloud metadata for all notes page
-    let meta = format!("<span class=\"meta-tag date-tag\">Created on {}</span>", naturalize_date(&timestamp));
+    let meta = format!("<span class=\"meta-tag date-tag\">Created on {}</span>", naturalize_date(&now));
     html = html.replace("{{note_meta}}", &meta);
     html = html.replace("{{last_updated_date}}", ""); // Clear this as we're using note_meta
 
@@ -793,13 +925,14 @@ fn generate_all_notes_page(
     html = html.replace("{{note_meta}}", "");
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
-    // Remove zero-width spaces before writing to file
+    // Remove zero-width spaces and clean up template variables before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
+    let final_html = cleanup_template_variables(&cleaned_html);
 
-    // Write to file
+    // Write to file - use all.html, not index.html to avoid overwriting the custom index
     let all_notes_path = output_dir.join("all.html");
     let mut file = File::create(&all_notes_path)?;
-    file.write_all(cleaned_html.as_bytes())?;
+    file.write_all(final_html.as_bytes())?;
 
     Ok(())
 }
@@ -811,19 +944,39 @@ fn generate_index_page(
     html_template: &str,
 ) -> std::io::Result<()> {
     let mut html = html_template.replace("{{title}}", "Notes Index");
-    let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
     html = html.replace("{{meta_description}}", "Collection of all notes");
+    html = html.replace("{{blog_description}}", "A collection of all notes");
+    html = html.replace("{{back_navigation}}", "");
+    
+    // Define site base URL for OpenGraph - this should be configurable in the future
+    let site_base_url = "https://example.com/";
+    
+    // OpenGraph URL
+    html = html.replace("{{og_url}}", &format!("{}", site_base_url));
+    
+    // Set OpenGraph published time in ISO 8601 format
+    let now_iso = Local::now();
+    let og_published_time = now_iso.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+    html = html.replace("{{og_published_time}}", &og_published_time);
+    
+    // No modified time for index page
+    html = html.replace("{{og_modified_time}}", "");
+    
+    // Remove OpenGraph image tag if no image
+    html = html.replace("<meta property=\"og:image\" content=\"{{og_image}}\">", "");
 
     html = html.replace("{{#header_image}}", "<!-- ");
     html = html.replace("{{/header_image}}", " -->");
+    html = html.replace("{{header_image}}", "");
     html = html.replace("{{blog_description}}", "A collection of all notes");
     html = html.replace("{{reading_time}}", "2");
     html = html.replace("{{author_name}}", "Notes Author");
-    html = html.replace("{{publish_date}}", &naturalize_date(&timestamp));
+    let now = Local::now().format("%Y%m%d%H%M%S").to_string();
+    html = html.replace("{{publish_date}}", &naturalize_date(&now));
 
-    let formatted_date = format!("Created on {}", naturalize_date(&timestamp));
+    let formatted_date = format!("Created on {}", naturalize_date(&now));
     html = html.replace("{{last_updated_date}}", &formatted_date);
 
     html = html.replace("{{category}}", "Notes");
@@ -897,13 +1050,14 @@ fn generate_index_page(
     html = html.replace("{{note_meta}}", "");
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
-    // Remove zero-width spaces before writing to file
+    // Remove zero-width spaces and clean up template variables before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
+    let final_html = cleanup_template_variables(&cleaned_html);
 
     // Write to file
-    let index_path = output_dir.join("index.html");
-    let mut file = File::create(&index_path)?;
-    file.write_all(cleaned_html.as_bytes())?;
+    let all_notes_path = output_dir.join("all.html");
+    let mut file = File::create(&all_notes_path)?;
+    file.write_all(final_html.as_bytes())?;
 
     Ok(())
 }
@@ -1131,13 +1285,14 @@ fn generate_tag_page(
     html = html.replace("{{note_meta}}", "");
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
-    // Remove zero-width spaces before writing to file
+    // Remove zero-width spaces and cleanup template variables before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
+    let final_html = cleanup_template_variables(&cleaned_html);
 
     // Write to file
     let file_path = output_dir.join(format!("tag_{}.html", tag.replace(" ", "_")));
     let mut file = File::create(&file_path)?;
-    file.write_all(cleaned_html.as_bytes())?;
+    file.write_all(final_html.as_bytes())?;
 
     Ok(())
 }
@@ -1150,6 +1305,7 @@ fn generate_html_for_note(
     all_tags: &HashSet<String>,
     html_template: &str,
 ) -> std::io::Result<()> {
+    println!("Generating HTML for note ID: {}", id);
     let note = &notes_map[id];
     let title = if !note.Properties.title.is_empty() {
         note.Properties.title.clone()
@@ -1171,9 +1327,115 @@ fn generate_html_for_note(
     let mut html = html_template.replace("{{title}}", &title);
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
-    html = html.replace("{{meta_description}}", &title);
+    
+    // Extract a good description for meta and OpenGraph tags
+    // Similar to how tooltip excerpts are generated
+    let mut description = String::new();
+    let mut paragraph_count = 0;
+    
+    // Process blocks to find meaningful content
+    for block in &note.Children {
+        if block.Type == "NodeParagraph" || block.Type == "Paragraph" {
+            // Only process first few paragraphs
+            if paragraph_count > 0 {
+                description.push(' '); // Add space between paragraphs
+            }
+            
+            // Get text from paragraph
+            let paragraph_content = render_blocks(&block.Children, notes_map, id_to_path);
+            
+            // Strip HTML
+            let mut plain_text = String::new();
+            let mut in_tag = false;
+            
+            for c in paragraph_content.chars() {
+                if c == '<' {
+                    in_tag = true;
+                } else if c == '>' {
+                    in_tag = false;
+                } else if !in_tag {
+                    plain_text.push(c);
+                }
+            }
+            
+            description.push_str(&plain_text);
+            paragraph_count += 1;
+            
+            // Limit to 2-3 paragraphs for description
+            if paragraph_count >= 2 && description.len() > 100 {
+                break;
+            }
+        }
+    }
+    
+    // If no paragraphs found, use title
+    if description.is_empty() {
+        description = title.clone();
+    }
+    
+    // Escape HTML in the description
+    let description = escape_html(&description);
+    
+    // Truncate description if too long (typical limit is around 200 chars)
+    let truncated_description = if description.len() > 200 {
+        // Ensure we cut at a character boundary
+        let mut end_index = 0;
+        let mut char_count = 0;
+        for (idx, _) in description.char_indices() {
+            end_index = idx;
+            char_count += 1;
+            if char_count >= 197 {
+                break;
+            }
+        }
+        format!("{}...", &description[0..end_index])
+    } else {
+        description
+    };
+
+    html = html.replace("{{meta_description}}", &truncated_description);
     html = html.replace("{{blog_description}}", "A collection of notes");
     html = html.replace("{{back_navigation}}", BACK_NAVIGATION_HTML);
+    
+    // Define site base URL - this should be configurable in the future
+    let site_base_url = "https://example.com/";
+    
+    // OpenGraph URL - will use the same title and description from meta tags
+    // For the index page, use a different URL format
+    if id == "index" {
+        html = html.replace("{{og_url}}", &format!("{}", site_base_url));
+    } else {
+        html = html.replace("{{og_url}}", &format!("{}{}.html", site_base_url, id));
+    }
+    
+    // Handle OpenGraph image if there's a header image
+    if !note.Properties.title_img.is_empty() {
+        // Extract URL from title_img CSS string
+        let img_url = note.Properties.title_img.clone();
+        // If the image is a background-image CSS property
+        if img_url.contains("background-image") {
+            let start = img_url.find("url(");
+            let end = img_url.find(")");
+            if let (Some(s), Some(e)) = (start, end) {
+                let image_path = &img_url[(s + 4)..(e)].trim_matches('"').trim_matches('\'');
+                let og_image = format!("{}{}", site_base_url, image_path);
+                // Replace the og:image tag content
+                html = html.replace("{{og_image}}", &og_image);
+            } else {
+                // If we couldn't parse the image URL, remove the tag
+                html = html.replace("<meta property=\"og:image\" content=\"{{og_image}}\">", "");
+            }
+        } else {
+            // Not a background-image CSS property
+            html = html.replace("<meta property=\"og:image\" content=\"{{og_image}}\">", "");
+        }
+    } else {
+        // If no image, remove the OpenGraph image tag
+        html = html.replace("<meta property=\"og:image\" content=\"{{og_image}}\">", "");
+    }
+    
+    // This section intentionally left empty as the OpenGraph published time
+    // is now handled later in the function
 
     // Add header image if it exists
     if !note.Properties.title_img.is_empty() {
@@ -1193,9 +1455,32 @@ fn generate_html_for_note(
 
     // Use created date for publish_date
     html = html.replace("{{publish_date}}", &naturalize_date(&created_date));
+    
+    // Set OpenGraph published time in ISO 8601 format
+    if !created_date.is_empty() && created_date.len() >= 14 {
+        let og_published_time = format!("{}-{}-{}T{}:{}:{}Z", 
+            &created_date[0..4], &created_date[4..6], &created_date[6..8],
+            &created_date[8..10], &created_date[10..12], &created_date[12..14]);
+        html = html.replace("{{og_published_time}}", &og_published_time);
+    } else {
+        // For index or other pages without a creation date, use current time
+        let now = Local::now();
+        let og_published_time = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        html = html.replace("{{og_published_time}}", &og_published_time);
+    }
 
     // Format conditional date string
     let formatted_date = if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+        // Add OpenGraph modified time in ISO 8601 format
+        if note.Properties.updated.len() >= 14 {
+            let og_modified_time = format!("{}-{}-{}T{}:{}:{}Z", 
+                &note.Properties.updated[0..4], &note.Properties.updated[4..6], &note.Properties.updated[6..8],
+                &note.Properties.updated[8..10], &note.Properties.updated[10..12], &note.Properties.updated[12..14]);
+            html = html.replace("{{#og_modified_time}}", "");
+            html = html.replace("{{/og_modified_time}}", "");
+            html = html.replace("{{og_modified_time}}", &og_modified_time);
+        }
+        
         format!("Created on {}, updated on {}",
             naturalize_date(&created_date),
             naturalize_date(&note.Properties.updated))
@@ -1228,6 +1513,8 @@ fn generate_html_for_note(
     let content = render_blocks_with_ids(&note.Children, notes_map, id_to_path);
     html = html.replace("{{content}}", &content);
 
+    // Already handled OpenGraph URL earlier
+    
     // Generate note metadata as a tag cloud
     let mut meta = String::new();
     
@@ -1252,29 +1539,60 @@ fn generate_html_for_note(
         let mut tags: Vec<_> = note.Properties.tags.split(',').map(|t| t.trim()).collect();
         tags.sort();
 
-        for tag in tags {
+        // Process tags for both display and OpenGraph
+        let mut og_tags_html = String::new();
+        
+        for tag in &tags {
             if !tag.is_empty() {
                 meta.push_str(&format!(
                     "<a href=\"tag_{}.html\" class=\"meta-tag\">{}</a>",
                     tag.replace(" ", "_"),
                     tag
                 ));
+                
+                // Add tag to OpenGraph tags
+                og_tags_html.push_str(&format!(
+                    "<meta property=\"article:tag\" content=\"{}\">", 
+                    tag
+                ));
             }
         }
+        
+        // Replace OpenGraph tags placeholder
+        if !og_tags_html.is_empty() {
+            html = html.replace("{{#og_tags}}", "");
+            html = html.replace("{{/og_tags}}", "");
+            html = html.replace("<meta property=\"article:tag\" content=\"{{.}}\">", &og_tags_html);
+        }
+    } else {
+        // Remove OpenGraph tags section if no tags
+        html = html.replace("{{#og_tags}}", "<!-- ");
+        html = html.replace("{{/og_tags}}", " -->");
     }
+    
+    // Generate absolute URL for OpenGraph URL
+    html = html.replace("{{og_url}}", &format!("{}{}.html", site_base_url, id));
+    
+    // TODO: Add configuration option for site_base_url
+    // In the future, this should be read from a config file and used consistently
+    // for all OpenGraph URLs and image paths
 
     html = html.replace("{{note_meta}}", &meta);
 
     // Set generation date
     html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
 
-    // Remove zero-width spaces before writing to file
+    // All template variables should be handled appropriately above
+    
+    // Remove zero-width spaces and clean up any remaining template variables
     let cleaned_html = remove_zero_width_spaces(&html);
+    let final_html = cleanup_template_variables(&cleaned_html);
 
     // Write to file
     let file_path = output_dir.join(format!("{}.html", id));
+    println!("Writing HTML to file: {:?}", file_path);
     let mut file = File::create(&file_path)?;
-    file.write_all(cleaned_html.as_bytes())?;
+    file.write_all(final_html.as_bytes())?;
 
     Ok(())
 }
@@ -2175,4 +2493,50 @@ fn remove_zero_width_spaces(html: &str) -> String {
     }
 
     result
+}
+
+// Function to clean up any remaining template variables in the HTML
+fn cleanup_template_variables(html: &str) -> String {
+    let mut result = String::new();
+    let mut current_pos = 0;
+    
+    // Find and remove template variables {{...}}
+    while let Some(start_pos) = html[current_pos..].find("{{") {
+        let absolute_start = current_pos + start_pos;
+        // Add everything up to the template variable
+        result.push_str(&html[current_pos..absolute_start]);
+        
+        // Find the end of the template variable
+        if let Some(end_pos) = html[absolute_start..].find("}}") {
+            // Skip past the template variable
+            current_pos = absolute_start + end_pos + 2;
+        } else {
+            // No closing }} found, so just add the {{ and continue
+            result.push_str("{{");
+            current_pos = absolute_start + 2;
+        }
+    }
+    
+    // Add the rest of the string
+    result.push_str(&html[current_pos..]);
+    
+    // Second pass: remove empty meta tags
+    let mut cleaned_html = String::new();
+    let lines: Vec<&str> = result.lines().collect();
+    
+    for line in lines {
+        let trimmed = line.trim();
+        if !(
+            (trimmed.starts_with("<meta property=\"og:") || 
+             trimmed.starts_with("<meta property=\"article:")) && 
+            (trimmed.contains("content=\"\"") || 
+             trimmed.contains("content=\"{{") || 
+             trimmed.contains("content=\"\">"))
+        ) {
+            cleaned_html.push_str(line);
+            cleaned_html.push('\n');
+        }
+    }
+    
+    cleaned_html
 }
