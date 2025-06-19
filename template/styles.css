@@ -72,8 +72,15 @@
     padding: 0;
 }
 
+/* Hide the checkbox input */
+.toc-toggle-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
 /* TOC Sidebar Styles */
-#toc-sidebar {
+.toc-sidebar {
     position: fixed;
     right: -300px;
     top: 0;
@@ -81,13 +88,14 @@
     height: 100%;
     background-color: var(--bg-color);
     border-left: 1px solid var(--border-color);
-    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.08);
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.05);
     z-index: 1000;
     overflow-y: auto;
-    transition: right 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: right 0.3s ease;
     padding: 20px;
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
+    will-change: right;
 }
 
 #toc-sidebar::-webkit-scrollbar {
@@ -103,7 +111,8 @@
     border-radius: 10px;
 }
 
-.toc-open #toc-sidebar {
+/* When checkbox is checked, show the sidebar */
+.toc-toggle-input:checked ~ .toc-sidebar {
     right: 0;
 }
 
@@ -124,25 +133,6 @@
 .toc-header h2 {
     margin: 0;
     font-size: 1.3rem;
-    position: relative;
-    display: inline-block;
-}
-
-.toc-header h2:after {
-    content: '';
-    position: absolute;
-    bottom: -5px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background-color: var(--primary-color);
-    transform: scaleX(0);
-    transform-origin: left;
-    transition: transform 0.3s ease;
-}
-
-.toc-open .toc-header h2:after {
-    transform: scaleX(1);
 }
 
 .toc-close-btn {
@@ -156,6 +146,10 @@
     padding: 5px;
     border-radius: 4px;
     transition: background-color 0.2s ease;
+}
+
+.header-icon {
+    cursor: pointer;
 }
 
 .toc-close-btn:hover {
@@ -175,13 +169,6 @@
     text-align: center;
     color: var(--text-secondary);
     font-style: italic;
-    position: sticky;
-    bottom: 0;
-    background-color: var(--bg-color);
-    padding-bottom: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
 }
 
 .toc-list {
@@ -192,66 +179,12 @@
 .toc-item {
     margin-bottom: 10px;
     line-height: 1.4;
-    opacity: 0;
-    transform: translateX(10px);
-    animation: fadeInRight 0.3s ease forwards;
-    animation-delay: calc(0.05s * var(--item-index, 0));
     position: relative;
 }
 
 .toc-item.active .toc-link {
     color: var(--primary-color);
     font-weight: 500;
-}
-
-.toc-item.active:before {
-    content: '';
-    position: absolute;
-    left: -15px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 4px;
-    height: 16px;
-    background-color: var(--primary-color);
-    border-radius: 2px;
-}
-
-/* TOC toggle button */
-.toc-toggle {
-    margin-top: 10px;
-}
-
-.toc-toggle-btn {
-    background-color: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    color: var(--text-color);
-    padding: 5px 10px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.toc-toggle-btn:hover {
-    background-color: var(--border-color);
-    color: var(--text-primary);
-}
-
-.toc-toggle-btn.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-@keyframes fadeInRight {
-    from {
-        opacity: 0;
-        transform: translateX(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
 }
 
 .toc-subitem {
@@ -263,30 +196,11 @@
     color: var(--text-color);
     display: block;
     padding: 5px 0;
-    transition: color 0.2s, transform 0.2s;
-    position: relative;
-}
-
-.toc-link:before {
-    content: '';
-    position: absolute;
-    left: -10px;
-    top: 50%;
-    transform: translateY(-50%) scaleX(0);
-    height: 2px;
-    width: 5px;
-    background-color: var(--primary-color);
-    transition: transform 0.2s ease;
-    transform-origin: right;
+    transition: color 0.2s;
 }
 
 .toc-link:hover {
     color: var(--primary-color);
-    transform: translateX(3px);
-}
-
-.toc-link:hover:before {
-    transform: translateY(-50%) scaleX(1);
 }
 
 #toc-overlay {
@@ -295,43 +209,52 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.3);
     z-index: 999;
     display: none;
+    cursor: pointer;
     opacity: 0;
     transition: opacity 0.3s ease;
-    cursor: pointer;
 }
 
-.toc-open #toc-overlay {
-    display: none; /* Default to not showing overlay on large screens */
-    opacity: 0;
-}
-
-/* Only show overlay on small screens */
+/* Mobile styles */
 @media (max-width: 768px) {
-    .toc-open #toc-overlay {
+    /* Show overlay on mobile when TOC is open */
+    .toc-toggle-input:checked ~ #toc-overlay {
         display: block;
         opacity: 1;
-    }
-    
-    .toc-toggle {
-        display: none; /* Hide keep open toggle on mobile */
     }
 }
 
 .content-wrapper {
-    transition: margin-right 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    will-change: margin-right;
+    transition: margin-right 0.3s ease;
     position: relative;
-    /* Allow scrolling when TOC is open */
-    overflow: auto;
+    min-height: 100vh;
 }
 
-.toc-open .content-wrapper {
+/* For keyboard accessibility - focus styles */
+.toc-toggle-input:focus-visible + label {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* When sidebar is open, adjust content margin */
+.toc-toggle-input:checked ~ .content-wrapper {
     margin-right: 300px;
-    /* No opacity change or blur on large screens */
     transition: margin-right 0.3s ease;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    /* On mobile, content doesn't shift */
+    .toc-toggle-input:checked ~ .content-wrapper {
+        margin-right: 0;
+        transition: none;
+    }
+    
+    body {
+        overflow-x: hidden;
+    }
 }
 
 html {
@@ -694,20 +617,12 @@ a {
     }
     
     /* TOC sidebar mobile styles */
-    #toc-sidebar {
-        width: 85%;
-        right: -85%;
-        box-shadow: -10px 0 25px rgba(0, 0, 0, 0.25);
+    .toc-sidebar {
+        width: 80%;
+        right: -80%;
     }
     
-    .toc-open .content-wrapper {
-        margin-right: 0;
-        /* On mobile, we don't shrink the content, we overlay the TOC */
-        transform: translateX(-20px);
-        opacity: 0.98;
-        /* Remove blur for better readability */
-        transition: transform 0.3s ease, opacity 0.3s ease;
-    }
+    /* Already covered above */
 }
 
 /* Blockquotes */

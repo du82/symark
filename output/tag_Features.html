@@ -13,109 +13,9 @@
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="SyMark">
     <meta property="og:locale" content="en_US">
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const menuButton = document.querySelector('.header-icon[title="Table of Contents"]');
-            const tocSidebar = document.getElementById('toc-sidebar');
-            const contentWrapper = document.querySelector('.content-wrapper');
-            const overlay = document.getElementById('toc-overlay');
-            
-            // Add animation delay to TOC items for staggered effect
-            function setupTocAnimation() {
-                const tocItems = document.querySelectorAll('.toc-item');
-                tocItems.forEach((item, index) => {
-                    item.style.setProperty('--item-index', index);
-                });
-            }
-            
-            // Setup TOC animation on page load
-            setupTocAnimation();
-            
-            // Handle TOC item clicks to close sidebar on mobile only
-            function setupTocItemClickHandlers() {
-                const tocLinks = document.querySelectorAll('.toc-link');
-                const isMobile = window.innerWidth <= 768;
-                
-                tocLinks.forEach(link => {
-                    link.addEventListener('click', function() {
-                        if (isMobile) {
-                            document.body.classList.remove('toc-open');
-                            menuButton.setAttribute('aria-expanded', 'false');
-                            tocSidebar.setAttribute('aria-hidden', 'true');
-                            document.body.style.overflow = '';
-                        }
-                    });
-                });
-            }
-            
-            setupTocItemClickHandlers();
-            
-            // Update on window resize
-            window.addEventListener('resize', function() {
-                setupTocItemClickHandlers();
-                
-                // Reset body overflow on large screens
-                if (window.innerWidth > 768) {
-                    document.body.style.overflow = '';
-                } else if (document.body.classList.contains('toc-open')) {
-                    document.body.style.overflow = 'hidden';
-                }
-            });
-            
-            menuButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                const isOpen = document.body.classList.toggle('toc-open');
-                
-                // Update ARIA attributes for accessibility
-                menuButton.setAttribute('aria-expanded', isOpen);
-                tocSidebar.setAttribute('aria-hidden', !isOpen);
-                
-                // Announce to screen readers
-                const status = isOpen ? 'Table of contents opened' : 'Table of contents closed';
-                
-                // Only prevent scrolling on mobile screens
-                if (isOpen) {
-                    if (window.innerWidth <= 768) {
-                        document.body.style.overflow = 'hidden';
-                    }
-                    
-                    // Reset animation by removing and re-adding classes
-                    const tocItems = document.querySelectorAll('.toc-item');
-                    tocItems.forEach(item => {
-                        item.style.animation = 'none';
-                        item.offsetHeight; // Force reflow
-                        item.style.animation = '';
-                    });
-                } else {
-                    document.body.style.overflow = '';
-                }
-            });
-            
-            overlay.addEventListener('click', function() {
-                document.body.classList.remove('toc-open');
-                menuButton.setAttribute('aria-expanded', 'false');
-                tocSidebar.setAttribute('aria-hidden', 'true');
-                document.body.style.overflow = '';
-            });
-            
-            // Allow keyboard navigation
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && document.body.classList.contains('toc-open')) {
-                    document.body.classList.remove('toc-open');
-                    menuButton.setAttribute('aria-expanded', 'false');
-                    tocSidebar.setAttribute('aria-hidden', 'true');
-                    
-                    // Only reset overflow if on mobile
-                    if (window.innerWidth <= 768) {
-                        document.body.style.overflow = '';
-                    }
-                }
-            });
-        });
-    </script>
 </head>
-<body>
+<body class="toc-enabled">
+    <input type="checkbox" id="toc-toggle" class="toc-toggle-input">
     <header class="site-header">
         <div class="header-content">
             <a href="index.html" class="site-title">SyMark</a>
@@ -123,22 +23,22 @@
                 <a href="#" class="header-icon" title="Search">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </a>
-                <a href="#" class="header-icon" title="Table of Contents" aria-label="Toggle table of contents" aria-controls="toc-sidebar" aria-expanded="false">
+                <label for="toc-toggle" class="header-icon" title="Table of Contents">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-                </a>
+                </label>
             </div>
         </div>
     </header>
     
-    <div id="toc-overlay" role="button" aria-label="Close table of contents"></div>
-<!-- Generated with SyMark, a static site generator for SiYuan Note. Available at https://github.com/du82/symark -->
-
-    <div id="toc-sidebar" role="navigation" aria-label="Table of contents" aria-hidden="true">
+    <label for="toc-toggle" id="toc-overlay"></label>
+    <aside id="toc-sidebar" class="toc-sidebar">
         <div class="toc-header">
             <h2>Table of Contents</h2>
-            <button class="toc-close-btn" aria-label="Close table of contents" onclick="document.body.classList.remove('toc-open'); if(window.innerWidth <= 768) document.body.style.overflow = ''; document.querySelector('.header-icon[aria-controls=\'toc-sidebar\']').setAttribute('aria-expanded', 'false'); document.getElementById('toc-sidebar').setAttribute('aria-hidden', 'true');">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
+            <label for="toc-toggle" class="toc-close-btn" title="Close table of contents">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18">
+<!-- Generated with SyMark, a static site generator for SiYuan Note. Available at https://github.com/du82/symark -->
+</line></svg>
+            </label>
         </div>
         <nav class="toc-nav">
             <ul class="toc-list">
@@ -150,7 +50,7 @@
                 <small>Click headings to navigate</small>
             </div>
         </nav>
-    </div>
+    </aside>
     
     <div class="content-wrapper">
         <div class="container">
@@ -170,11 +70,11 @@
 
             <div class="article-content">
                 <ul><li><span class="tooltip"><a href="20250507135108-7plxwem.html">Templating</a><span class="right bottom"><span class="tooltip-title">Templating</span><span class="tooltip-excerpt">Symark uses a templating system to generate consistent HTML pages:</span><i></i></span></span>
-<li><span class="tooltip"><a href="20250506230139-lnmadl3.html">Themes</a><span class="right bottom"><span class="tooltip-title">Themes</span><span class="tooltip-excerpt">Currently there is only one theme. Here&#39;s what it looks like in the app compared to the site it generates.</span><i></i></span></span>
 <li><span class="tooltip"><a href="20250507101719-g6hylwe.html">Changelog</a><span class="right bottom"><span class="tooltip-title">Changelog</span><span class="tooltip-excerpt">Tagged with: Features</span><i></i></span></span>
+<li><span class="tooltip"><a href="20250506230139-lnmadl3.html">Themes</a><span class="right bottom"><span class="tooltip-title">Themes</span><span class="tooltip-excerpt">Currently there is only one theme. Here&#39;s what it looks like in the app compared to the site it generates.</span><i></i></span></span>
 </ul><h2 id="section-all-tags">All Tags</h2>
 <div class="tags-container">
-<span class="tooltip"><a href="tag_Features.html" class="tag active">Features</a><span class="right bottom"><span class="tooltip-excerpt">3 notes have the tag "Features": "Templating", "Themes", "Changelog"</span><i></i></span></span>
+<span class="tooltip"><a href="tag_Features.html" class="tag active">Features</a><span class="right bottom"><span class="tooltip-excerpt">3 notes have the tag "Features": "Templating", "Changelog", "Themes"</span><i></i></span></span>
 </div>
             </div>
         </main>
