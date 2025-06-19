@@ -797,7 +797,9 @@ fn generate_custom_index_page(
 
     // Remove zero-width spaces and clean up any remaining template variables
     let cleaned_html = remove_zero_width_spaces(&html);
-    let final_html = cleanup_template_variables(&cleaned_html);
+    let cleaned_html = cleanup_template_variables(&html);
+
+    let final_html = comment_processor(&cleaned_html);
 
     // Write to file
     let file_path = output_dir.join("index.html");
@@ -927,7 +929,9 @@ fn generate_all_notes_page(
 
     // Remove zero-width spaces and clean up template variables before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
-    let final_html = cleanup_template_variables(&cleaned_html);
+    let cleaned_html = cleanup_template_variables(&cleaned_html);
+
+    let final_html = comment_processor(&cleaned_html);
 
     // Write to file - use all.html, not index.html to avoid overwriting the custom index
     let all_notes_path = output_dir.join("all.html");
@@ -1052,7 +1056,9 @@ fn generate_index_page(
 
     // Remove zero-width spaces and clean up template variables before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
-    let final_html = cleanup_template_variables(&cleaned_html);
+    let cleaned_html = cleanup_template_variables(&cleaned_html);
+
+    let final_html = comment_processor(&cleaned_html);
 
     // Write to file
     let all_notes_path = output_dir.join("all.html");
@@ -1287,7 +1293,9 @@ fn generate_tag_page(
 
     // Remove zero-width spaces and cleanup template variables before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
-    let final_html = cleanup_template_variables(&cleaned_html);
+    let cleaned_html = cleanup_template_variables(&cleaned_html);
+
+    let final_html = comment_processor(&cleaned_html);
 
     // Write to file
     let file_path = output_dir.join(format!("tag_{}.html", tag.replace(" ", "_")));
@@ -1586,7 +1594,9 @@ fn generate_html_for_note(
 
     // Remove zero-width spaces and clean up any remaining template variables
     let cleaned_html = remove_zero_width_spaces(&html);
-    let final_html = cleanup_template_variables(&cleaned_html);
+    let cleaned_html = cleanup_template_variables(&cleaned_html);
+
+    let final_html = comment_processor(&cleaned_html);
 
     // Write to file
     let file_path = output_dir.join(format!("{}.html", id));
@@ -2385,6 +2395,108 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
     }
 
     html
+}
+
+fn comment_processor(html: &str) -> String {
+    const COMMENT: &str = "\n<!-- Generated with SyMark, a static site generator for SiYuan Note. Available at https://github.com/du82/symark -->\n";
+
+    let mut insertion_points = Vec::new();
+    let mut depth = 0;
+    let mut in_tag = false;
+    let mut in_comment = false;
+    let mut in_script = false;
+    let mut in_style = false;
+    let mut total_points = 0;
+
+    for (i, c) in html.char_indices() {
+        match c {
+            '<' => {
+                if !in_comment {
+                    in_tag = true;
+                    if html[i..].starts_with("<!--") {
+                        in_comment = true;
+                    } else if i + 7 <= html.len() && html[i..].starts_with("<script") {
+                        in_script = true;
+                    } else if i + 6 <= html.len() && html[i..].starts_with("<style") {
+                        in_style = true;
+                    } else if i + 9 <= html.len() && html[i..].starts_with("</script>") {
+                        in_script = false;
+                    } else if i + 8 <= html.len() && html[i..].starts_with("</style>") {
+                        in_style = false;
+                    }
+                }
+            },
+            '>' => {
+                if in_comment && i > 2 && &html[i-2..=i] == "-->" {
+                    in_comment = false;
+                    in_tag = false;
+                } else if in_tag && !in_comment {
+                    in_tag = false;
+                    if i > 0 {
+                        let tag_start = html[..i].rfind('<').unwrap_or(i);
+                        let tag_content = &html[tag_start..=i];
+                        
+                        // Opening tag increases depth
+                        if !tag_content.starts_with("</") && !tag_content.ends_with("/>") {
+                            depth += 1;
+                        }
+                        else if tag_content.starts_with("</") {
+                            if depth > 0 {
+                                depth -= 1;
+                            }
+                        }
+                    }
+                }
+            },
+            _ => {}
+        }
+
+        if !in_tag && !in_comment && !in_script && !in_style {
+            if c == '\n' || c == ' ' || c == '>' {
+                let position_ratio = i as f64 / html.len() as f64;
+                if depth >= 3 && position_ratio > 0.2 && position_ratio < 0.8 {
+                    insertion_points.push((i, depth));
+                    total_points += 1;
+                }
+            }
+        }
+    }
+
+    if total_points > 0 {
+        let mid_section: Vec<(usize, usize)> = insertion_points.iter()
+            .filter(|(pos, d)| {
+                let pos_ratio = *pos as f64 / html.len() as f64;
+                *d >= 3 && pos_ratio >= 0.2 && pos_ratio <= 0.8
+            })
+            .cloned()
+            .collect();
+        
+        let weighted_points: Vec<(usize, usize)> = mid_section.iter()
+            .flat_map(|(pos, d)| {
+                let weight = d * d; // Square the depth to increase probability for deeper points
+                std::iter::repeat((*pos, *d)).take(weight)
+            })
+            .collect();
+        
+        if !weighted_points.is_empty() {
+            let seed = html.len() + html.chars().fold(0, |acc, c| acc + c as usize);
+            let index_pos = seed % weighted_points.len();
+            let (insertion_point, _) = weighted_points[index_pos];
+
+            let mut result = String::with_capacity(html.len() + COMMENT.len());
+            result.push_str(&html[..=insertion_point]);
+            result.push_str(COMMENT);
+            result.push_str(&html[insertion_point+1..]);
+            return result;
+        }
+    }
+    
+    let middle_point = html.len() / 2;
+    let mut result = String::with_capacity(html.len() + COMMENT.len());
+    result.push_str(&html[..middle_point]);
+    result.push_str(COMMENT);
+    result.push_str(&html[middle_point..]);
+    result
 }
 
 fn find_block_by_id<'a>(block_id: &str, blocks: &'a [Block]) -> Option<&'a Block> {
