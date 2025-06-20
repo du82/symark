@@ -92,7 +92,7 @@
     z-index: 1000;
     overflow-y: auto;
     transition: right 0.3s ease;
-    padding: 20px;
+    padding: 5px 20px;
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
     will-change: right;
@@ -251,7 +251,7 @@
         margin-right: 0;
         transition: none;
     }
-    
+
     body {
         overflow-x: hidden;
     }
@@ -339,6 +339,17 @@ img {
 
 .site-title:hover {
     color: var(--link-color);
+}
+
+.toc-title {
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--text-color);
+    font-family: var(--font-heading);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
 }
 
 .header-icons {
@@ -615,13 +626,13 @@ a {
     .header-icon {
         padding: 4px;
     }
-    
+
     /* TOC sidebar mobile styles */
     .toc-sidebar {
         width: 80%;
         right: -80%;
     }
-    
+
     /* Already covered above */
 }
 
