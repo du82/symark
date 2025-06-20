@@ -882,7 +882,7 @@ fn generate_all_notes_page(
     }
 
     // Generate content
-    let mut content = String::from("<h2 id=\"section-all-notes\">All Notes</h2>\n<ul>\n");
+    let mut content = String::from("\n<ul>\n");
     for note in &sorted_notes {
         content.push_str(&format!(
             "<li><a href=\"{}.html\">{}</a></li>\n",
