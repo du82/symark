@@ -22,6 +22,16 @@
         .node-label {
             font-size: 12px;
             pointer-events: none;
+            font-weight: 500;
+            text-shadow: 1px 1px 0 var(--background-color),
+                        -1px 1px 0 var(--background-color),
+                        1px -1px 0 var(--background-color),
+                        -1px -1px 0 var(--background-color),
+                        0px 1px 0 var(--background-color),
+                        0px -1px 0 var(--background-color),
+                        1px 0px 0 var(--background-color),
+                        -1px 0px 0 var(--background-color);
+            transition: all 0.3s ease;
         }
 
         .graph-container {
@@ -37,63 +47,7 @@
             background-size: 25px 25px;
         }
 
-        .controls {
-            position: absolute;
-            top: 60px;
-            left: 10px;
-            right: 10px;
-            z-index: 100;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            background-color: var(--background-color);
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            backdrop-filter: blur(5px);
-            border: 1px solid var(--border-color);
-        }
 
-        .controls > div {
-            margin-bottom: 10px;
-        }
-
-        .search-container {
-            position: relative;
-        }
-
-        #search {
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            width: 300px;
-            background-color: var(--background-color);
-            color: var(--text-color);
-        }
-
-        #search-results {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            width: 100%;
-            max-height: 200px;
-            overflow-y: auto;
-            background-color: var(--background-color);
-            border: 1px solid var(--border-color);
-            border-radius: 0 0 4px 4px;
-            z-index: 10;
-            display: none;
-        }
-
-        .search-result {
-            padding: 8px;
-            cursor: pointer;
-        }
-
-        .search-result:hover {
-            background-color: var(--hover-color);
-        }
 
         .tooltip {
             position: absolute;
@@ -142,6 +96,8 @@
 
     <div class="graph-container" id="graph"></div>
     <div id="tooltip" class="tooltip"></div>
+    
+
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
@@ -197,11 +153,16 @@
                 }));
 
             // Create the force simulation
+            const nodeSizeMultiplier = 1;
             const simulation = d3.forceSimulation(graphData.nodes)
-                .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(150))
-                .force('charge', d3.forceManyBody().strength(-300))
+                .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(200))
+                .force('charge', d3.forceManyBody().strength(-350))
                 .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collision', d3.forceCollide().radius(40));
+                .force('collision', d3.forceCollide().radius(d => (6 + Math.min(d.connections || 0, 10)) * 2))
+                .alphaDecay(0.008) // Slower cooling for better stabilization
+                .velocityDecay(0.3) // Add some friction to prevent excessive movement
+                .alpha(0.3) // Set initial alpha
+                .restart();
 
             // Draw the links
             const link = g.append('g')
@@ -219,9 +180,11 @@
                 .data(graphData.nodes)
                 .enter()
                 .append('circle')
-                .attr('r', d => 6 + Math.min(d.connections || 0, 10))
+                .attr('r', d => (6 + Math.min(d.connections || 0, 10)) * nodeSizeMultiplier)
                 .attr('fill', getNodeColor)
                 .attr('filter', 'drop-shadow(0 2px 3px rgba(0,0,0,0.2))')
+                .attr('stroke-width', 2) // Slightly thicker stroke
+                .attr('stroke', '#fff')
                 .call(d3.drag()
                     .on('start', dragstarted)
                     .on('drag', dragged)
@@ -230,14 +193,21 @@
             // Add labels to nodes
             const label = g.append('g')
                 .attr('class', 'node-labels')
-                .selectAll('text')
+                .selectAll('g')
                 .data(graphData.nodes)
                 .enter()
-                .append('text')
+                .append('g')
+                .attr('class', 'node-label-container');
+
+            // No background rectangle needed since we're using text shadow
+
+            // Add the text with better positioning
+            label.append('text')
                 .attr('class', 'node-label')
                 .text(d => d.title || d.id)
-                .attr('dx', 12)
-                .attr('dy', 4);
+                .attr('dx', 0)
+                .attr('dy', 4)
+                .attr('fill', 'var(--text-color)');
 
             // Node hover effects
             node.on('mouseover', function(event, d) {
@@ -273,10 +243,14 @@
 
                     node.style('opacity', n => isConnected(d, n) ? 1 : 0.15)
                         .style('r', n => isConnected(d, n) && n.id === d.id
-                            ? (6 + Math.min(n.connections || 0, 10)) * 1.5
-                            : 6 + Math.min(n.connections || 0, 10));
+                            ? (6 + Math.min(n.connections || 0, 10)) * nodeSizeMultiplier * 1.5
+                            : (6 + Math.min(n.connections || 0, 10)) * nodeSizeMultiplier);
+                    
                     label.style('opacity', n => isConnected(d, n) ? 1 : 0.15)
-                         .style('font-weight', n => n.id === d.id ? 'bold' : 'normal');
+                        .select('text')
+                        .style('font-weight', n => n.id === d.id ? 'bold' : 'normal');
+                    
+                    // No background rectangle styling needed
                 })
                 .on('mouseout', function() {
                     tooltip.style('opacity', 0)
@@ -288,9 +262,13 @@
                         .style('stroke-width', d => Math.sqrt(d.value || 1) * 1.5);
 
                     node.style('opacity', 1)
-                        .style('r', d => 6 + Math.min(d.connections || 0, 10));
+                        .style('r', d => (6 + Math.min(d.connections || 0, 10)) * nodeSizeMultiplier);
+                    
                     label.style('opacity', 1)
-                         .style('font-weight', 'normal');
+                        .select('text')
+                        .style('font-weight', 'normal');
+                    
+                    // No background rectangle reset needed
                 })
                 .on('click', function(event, d) {
                     window.location.href = d.id + '.html';
@@ -308,9 +286,8 @@
                     .attr('cx', d => d.x)
                     .attr('cy', d => d.y);
 
-                label
-                    .attr('x', d => d.x)
-                    .attr('y', d => d.y);
+                // Position the label groups
+                label.attr('transform', d => `translate(${d.x + 12}, ${d.y})`);
             });
 
             // Drag functions
@@ -327,8 +304,10 @@
 
             function dragended(event, d) {
                 if (!event.active) simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
+                // Keep the node fixed after dragging to prevent disconnection from links
+                // We're explicitly setting fx and fy to the current position
+                d.fx = d.x;
+                d.fy = d.y;
             }
 
             // Check if two nodes are connected
@@ -340,67 +319,22 @@
                 );
             }
 
-            // Set up control handlers
-            document.getElementById('charge-strength').addEventListener('input', function() {
-                simulation.force('charge').strength(this.value);
-                simulation.alpha(1).restart();
-            });
-
-            document.getElementById('link-distance').addEventListener('input', function() {
-                simulation.force('link').distance(this.value);
-                simulation.alpha(1).restart();
-            });
-
-            // Set up search functionality
-            const searchInput = document.getElementById('search');
-            const searchResults = document.getElementById('search-results');
-
-            searchInput.addEventListener('input', function() {
-                const query = this.value.toLowerCase();
-                if (query.length < 2) {
-                    searchResults.style.display = 'none';
-                    return;
-                }
-
-                const matches = graphData.nodes.filter(n =>
-                    (n.title && n.title.toLowerCase().includes(query)) ||
-                    n.id.toLowerCase().includes(query)
+            // Check if two nodes are connected
+            function isConnected(a, b) {
+                if (a.id === b.id) return true;
+                return graphData.links.some(l =>
+                    (l.source.id === a.id && l.target.id === b.id) ||
+                    (l.source.id === b.id && l.target.id === a.id)
                 );
-
-                searchResults.innerHTML = '';
-                matches.forEach(match => {
-                    const div = document.createElement('div');
-                    div.className = 'search-result';
-                    div.textContent = match.title || match.id;
-                    div.addEventListener('click', () => {
-                        // Highlight the node and center the view
-                        const transform = d3.zoomTransform(svg.node());
-                        const scale = transform.k;
-                        const x = -match.x * scale + width / 2;
-                        const y = -match.y * scale + height / 2;
-
-                        svg.transition().duration(750).call(
-                            d3.zoom().transform,
-                            d3.zoomIdentity.translate(x, y).scale(scale)
-                        );
-
-                        // Simulate a click on the node
-                        node.filter(n => n.id === match.id).dispatch('mouseover');
-
-                        searchResults.style.display = 'none';
-                    });
-                    searchResults.appendChild(div);
+            }
+            
+            // Fix all nodes after 3 seconds of simulation to prevent disconnections
+            setTimeout(() => {
+                graphData.nodes.forEach(d => {
+                    d.fx = d.x;
+                    d.fy = d.y;
                 });
-
-                searchResults.style.display = matches.length > 0 ? 'block' : 'none';
-            });
-
-            // Hide search results when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-                    searchResults.style.display = 'none';
-                }
-            });
+            }, 3000);
         }
 
         // Initialize when DOM is ready
