@@ -1,4 +1,5 @@
 //! SyMark: Static site generator for SiYuan notes.
+//! Includes a D3.js visualization for exploring note connections.
 
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
@@ -8,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use chrono::Local;
 use base64::decode;
 use std::time::Instant;
+use serde_json::json;
 
 #[derive(Debug, Deserialize)]
 struct Note {
@@ -324,6 +326,7 @@ fn main() -> std::io::Result<()> {
 
         let html_template = read_template("template/page.html");
         let css_template = read_template("template/styles.css");
+        let graph_template = read_template("template/graph.html");
 
         let cleaned_html_template = remove_zero_width_spaces(&html_template);
         let mut html_file = File::create(template_dir.join("page.html"))?;
@@ -332,6 +335,10 @@ fn main() -> std::io::Result<()> {
         let cleaned_css_template = remove_zero_width_spaces(&css_template);
         let mut css_file = File::create(template_dir.join("styles.css"))?;
         css_file.write_all(cleaned_css_template.as_bytes())?;
+
+        let cleaned_graph_template = remove_zero_width_spaces(&graph_template);
+        let mut graph_file = File::create(template_dir.join("graph.html"))?;
+        graph_file.write_all(cleaned_graph_template.as_bytes())?;
 
         println!("Created template files in {:?}", template_dir);
     }
@@ -442,6 +449,13 @@ fn main() -> std::io::Result<()> {
         generate_tag_page(tag, &notes_map, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
     }
+
+    println!("Generating graph page...");
+    let graph_template = read_template("template/graph.html");
+    generate_graph_page(&notes_map, &output_dir, &all_tags, &graph_template)?;
+    page_count += 1;
+
+
 
 
     let elapsed = start_time.elapsed();
@@ -864,6 +878,12 @@ fn generate_all_notes_page(
         text: "Tags".to_string(),
         level: 2,
     });
+    
+    toc_items.push(TocItem {
+        id: "section-graph".to_string(),
+        text: "Content Graph".to_string(),
+        level: 2,
+    });
 
     let toc_html = generate_toc_html(&toc_items);
     html = html.replace("{{table_of_contents}}", &toc_html);
@@ -895,6 +915,11 @@ fn generate_all_notes_page(
     content.push_str("<h2 id=\"section-tags\">Tags</h2>\n<div class=\"tags-container\">\n");
     content.push_str(&tags_html);
     content.push_str("</div>");
+    
+    // Add graph visualization section
+    content.push_str("<h2 id=\"section-graph\">Content Graph</h2>\n");
+    content.push_str("<p>Explore the connections between notes in an interactive visualization.</p>\n");
+    content.push_str("<p><a href=\"graph.html\" class=\"nav-link\">View Content Graph</a></p>\n");
 
     html = html.replace("{{content}}", &content);
 
@@ -991,6 +1016,12 @@ fn generate_index_page(
         text: "Tags".to_string(),
         level: 2,
     });
+    
+    toc_items.push(TocItem {
+        id: "section-graph".to_string(),
+        text: "Content Graph".to_string(),
+        level: 2,
+    });
 
     let toc_html = generate_toc_html(&toc_items);
     html = html.replace("{{table_of_contents}}", &toc_html);
@@ -1022,6 +1053,11 @@ fn generate_index_page(
     content.push_str("<h2 id=\"section-tags\">Tags</h2>\n<div class=\"tags-container\">\n");
     content.push_str(&tags_html);
     content.push_str("</div>");
+    
+    // Add graph visualization section
+    content.push_str("<h2 id=\"section-graph\">Content Graph</h2>\n");
+    content.push_str("<p>Explore the connections between notes in an interactive visualization.</p>\n");
+    content.push_str("<p><a href=\"graph.html\" class=\"nav-link\">View Content Graph</a></p>\n");
 
     html = html.replace("{{content}}", &content);
 
@@ -1041,6 +1077,193 @@ fn generate_index_page(
     file.write_all(final_html.as_bytes())?;
 
     Ok(())
+}
+
+fn generate_graph_page(
+    notes_map: &HashMap<String, Note>,
+    output_dir: &Path,
+    all_tags: &HashSet<String>,
+    graph_template: &str,
+) -> std::io::Result<()> {
+    println!("Generating graph page");
+
+    // Create the graph data structure
+    let mut nodes = Vec::new();
+    let mut links = Vec::new();
+    let mut node_indices = HashMap::new();
+    let mut node_index = 0;
+
+    // Create a color palette for tags
+    let predefined_colors = [
+        "#4285F4", // Blue
+        "#EA4335", // Red
+        "#FBBC05", // Yellow
+        "#34A853", // Green
+        "#9C27B0", // Purple
+        "#FF9800", // Orange
+        "#00BCD4", // Cyan
+        "#795548", // Brown
+        "#607D8B", // Blue-gray
+        "#E91E63", // Pink
+    ];
+    
+    // Map tags to colors
+    let mut tag_colors = HashMap::new();
+    let mut color_index = 0;
+    
+    for tag in all_tags {
+        if color_index < predefined_colors.len() {
+            tag_colors.insert(tag.clone(), predefined_colors[color_index].to_string());
+            color_index += 1;
+        } else {
+            // If we run out of colors, reuse them
+            tag_colors.insert(tag.clone(), predefined_colors[color_index % predefined_colors.len()].to_string());
+            color_index += 1;
+        }
+    }
+
+    // First pass: Create all nodes
+    for (id, note) in notes_map {
+        let title = if !note.Properties.title.is_empty() {
+            note.Properties.title.clone()
+        } else {
+            id.clone()
+        };
+
+        // Store the node index for quick lookup
+        node_indices.insert(id.clone(), node_index);
+        node_index += 1;
+
+        // Collect all tags for color grouping
+        let tags_list = if !note.Properties.tags.is_empty() {
+            note.Properties.tags.split(',').map(|t| t.trim().to_string()).collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
+
+        // Create a node object
+        nodes.push(json!({
+            "id": id,
+            "title": title,
+            "tags": tags_list,
+            "connections": 0
+        }));
+    }
+
+    // Second pass: Create all links
+    for (id, note) in notes_map {
+        // Recursively scan blocks for links
+        scan_blocks_for_links(&note.Children, notes_map, id, &mut links, &node_indices);
+    }
+
+    // Update node connection counts
+    let mut node_connections = HashMap::new();
+    for link in &links {
+        // Increment source node connections
+        let source = link["source"].as_str().unwrap();
+        *node_connections.entry(source.to_string()).or_insert(0) += 1;
+
+        // Increment target node connections
+        let target = link["target"].as_str().unwrap();
+        *node_connections.entry(target.to_string()).or_insert(0) += 1;
+    }
+
+    // Update the nodes with connection counts
+    for node in &mut nodes {
+        if let Some(count) = node_connections.get(node["id"].as_str().unwrap()) {
+            node["connections"] = json!(*count);
+        }
+    }
+
+    // Create the graph data JSON
+    let graph_data = json!({
+        "nodes": nodes,
+        "links": links
+    });
+    
+    // Create tag color JSON
+    let tag_colors_json = json!(tag_colors);
+    
+    // Generate tag color HTML blocks
+    let mut tag_color_blocks = String::new();
+    for (tag, color) in &tag_colors {
+        tag_color_blocks.push_str(&format!(
+            "<span style=\"display: inline-block; padding: 5px 10px; background: {}; color: white; border-radius: 4px;\">{}</span>\n",
+            color, tag
+        ));
+    }
+    // Add default color
+    tag_color_blocks.push_str(
+        "<span style=\"display: inline-block; padding: 5px 10px; background: #69b3a2; color: white; border-radius: 4px;\">Default</span>\n"
+    );
+
+    // Process the graph template
+    let mut graph_html = graph_template.to_string();
+    
+    // Replace template variables
+    graph_html = graph_html.replace("{{site_name}}", "SyMark");
+    
+    // Remove tag colors section since we're using a full-screen layout
+    graph_html = graph_html.replace("{{#tag_colors}}", "<!-- ");
+    graph_html = graph_html.replace("{{/tag_colors}}", " -->");
+    graph_html = graph_html.replace("{{tag_color_blocks}}", "");
+    
+    // Insert the tag colors JSON
+    graph_html = graph_html.replace("{{tag_colors_json}}", &tag_colors_json.to_string());
+    
+    // Insert the graph data
+    graph_html = graph_html.replace("const graphData = {\n            nodes: [],\n            links: []\n        };", 
+                                   &format!("const graphData = {};", graph_data.to_string()));
+
+    // Generate the HTML file
+    let output_path = output_dir.join("graph.html");
+    let mut file = File::create(&output_path)?;
+    
+    // Clean up any remaining template variables
+    let cleaned_html = remove_zero_width_spaces(&graph_html);
+    let cleaned_html = cleanup_template_variables(&cleaned_html);
+    
+    file.write_all(cleaned_html.as_bytes())?;
+
+    println!("Generated graph page: {:?}", output_path);
+    Ok(())
+}
+
+// Helper function to scan blocks for links
+fn scan_blocks_for_links(
+    blocks: &[Block],
+    notes_map: &HashMap<String, Note>,
+    source_id: &str,
+    links: &mut Vec<serde_json::Value>,
+    node_indices: &HashMap<String, usize>
+) {
+    for block in blocks {
+        // Check if this is a block reference
+        if block.Type == "NodeTextMark" && block.TextMarkType == "block-ref" {
+            let target_id = &block.TextMarkBlockRefID;
+            if !target_id.is_empty() && notes_map.contains_key(target_id) && source_id != target_id {
+                // Check if this link already exists
+                let link_exists = links.iter().any(|link| {
+                    let s = link["source"].as_str().unwrap();
+                    let t = link["target"].as_str().unwrap();
+                    (s == source_id && t == target_id) || (s == target_id && t == source_id)
+                });
+
+                if !link_exists {
+                    links.push(json!({
+                        "source": source_id,
+                        "target": target_id,
+                        "value": 1
+                    }));
+                }
+            }
+        }
+
+        // Recursively check children blocks
+        if !block.Children.is_empty() {
+            scan_blocks_for_links(&block.Children, notes_map, source_id, links, node_indices);
+        }
+    }
 }
 
 fn generate_tag_page(
