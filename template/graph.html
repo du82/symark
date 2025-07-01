@@ -96,7 +96,7 @@
 
     <div class="graph-container" id="graph"></div>
     <div id="tooltip" class="tooltip"></div>
-    
+
 
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -245,11 +245,11 @@
                         .style('r', n => isConnected(d, n) && n.id === d.id
                             ? (6 + Math.min(n.connections || 0, 10)) * nodeSizeMultiplier * 1.5
                             : (6 + Math.min(n.connections || 0, 10)) * nodeSizeMultiplier);
-                    
+
                     label.style('opacity', n => isConnected(d, n) ? 1 : 0.15)
                         .select('text')
                         .style('font-weight', n => n.id === d.id ? 'bold' : 'normal');
-                    
+
                     // No background rectangle styling needed
                 })
                 .on('mouseout', function() {
@@ -263,11 +263,11 @@
 
                     node.style('opacity', 1)
                         .style('r', d => (6 + Math.min(d.connections || 0, 10)) * nodeSizeMultiplier);
-                    
+
                     label.style('opacity', 1)
                         .select('text')
                         .style('font-weight', 'normal');
-                    
+
                     // No background rectangle reset needed
                 })
                 .on('click', function(event, d) {
@@ -327,14 +327,6 @@
                     (l.source.id === b.id && l.target.id === a.id)
                 );
             }
-            
-            // Fix all nodes after 3 seconds of simulation to prevent disconnections
-            setTimeout(() => {
-                graphData.nodes.forEach(d => {
-                    d.fx = d.x;
-                    d.fy = d.y;
-                });
-            }, 3000);
         }
 
         // Initialize when DOM is ready

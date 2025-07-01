@@ -96,13 +96,13 @@
 
     <div class="graph-container" id="graph"></div>
     <div id="tooltip" class="tooltip"></div>
-    
+
 
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
         // Graph data will be populated by the generator
-        const graphData = {"links":[{"source":"20250507101719-g6hylwe","target":"20250506183737-jh03nc2","value":1},{"source":"20250506164324-csw026m","target":"20250506183737-jh03nc2","value":1},{"source":"20250506164324-csw026m","target":"20250507101719-g6hylwe","value":1},{"source":"20250506164324-csw026m","target":"20250508102758-u01h899","value":1},{"source":"20250506164324-csw026m","target":"20250506230139-lnmadl3","value":1},{"source":"20250506164324-csw026m","target":"20250507135108-7plxwem","value":1},{"source":"20250506164324-csw026m","target":"20250507101913-9jo95mk","value":1},{"source":"20250506164324-csw026m","target":"20250615054852-jaujqy6","value":1},{"source":"20250506164324-csw026m","target":"20250616021259-6nf4yjv","value":1}],"nodes":[{"connections":2,"id":"20250506183737-jh03nc2","tags":[],"title":"How to use SyMark"},{"connections":1,"id":"20250506230139-lnmadl3","tags":["Features"],"title":"Themes"},{"connections":1,"id":"20250615054852-jaujqy6","tags":[],"title":"Design philosophy of SyMark"},{"connections":2,"id":"20250507101719-g6hylwe","tags":["Features"],"title":"Changelog"},{"connections":1,"id":"20250508102758-u01h899","tags":[],"title":"Benchmarks"},{"connections":0,"id":"20250507152346-lt7yop4","tags":[],"title":"Showcase"},{"connections":1,"id":"20250507101913-9jo95mk","tags":[],"title":"Build software to last"},{"connections":1,"id":"20250616021259-6nf4yjv","tags":[],"title":"How SyMark works"},{"connections":1,"id":"20250507135108-7plxwem","tags":["Features"],"title":"Templating"},{"connections":8,"id":"20250506164324-csw026m","tags":["index"],"title":"SyMark: Transform Your SiYuan Notes into Beautiful Websites"}]};
+        const graphData = {"links":[{"source":"20250506164324-csw026m","target":"20250506183737-jh03nc2","value":1},{"source":"20250506164324-csw026m","target":"20250507101719-g6hylwe","value":1},{"source":"20250506164324-csw026m","target":"20250508102758-u01h899","value":1},{"source":"20250506164324-csw026m","target":"20250506230139-lnmadl3","value":1},{"source":"20250506164324-csw026m","target":"20250507135108-7plxwem","value":1},{"source":"20250506164324-csw026m","target":"20250507101913-9jo95mk","value":1},{"source":"20250506164324-csw026m","target":"20250615054852-jaujqy6","value":1},{"source":"20250506164324-csw026m","target":"20250616021259-6nf4yjv","value":1},{"source":"20250507101719-g6hylwe","target":"20250506183737-jh03nc2","value":1}],"nodes":[{"connections":8,"id":"20250506164324-csw026m","tags":["index"],"title":"SyMark: Transform Your SiYuan Notes into Beautiful Websites"},{"connections":0,"id":"20250507152346-lt7yop4","tags":[],"title":"Showcase"},{"connections":2,"id":"20250507101719-g6hylwe","tags":["Features"],"title":"Changelog"},{"connections":1,"id":"20250616021259-6nf4yjv","tags":[],"title":"How SyMark works"},{"connections":1,"id":"20250507101913-9jo95mk","tags":[],"title":"Build software to last"},{"connections":1,"id":"20250507135108-7plxwem","tags":["Features"],"title":"Templating"},{"connections":1,"id":"20250615054852-jaujqy6","tags":[],"title":"Design philosophy of SyMark"},{"connections":1,"id":"20250508102758-u01h899","tags":[],"title":"Benchmarks"},{"connections":2,"id":"20250506183737-jh03nc2","tags":[],"title":"How to use SyMark"},{"connections":1,"id":"20250506230139-lnmadl3","tags":["Features"],"title":"Themes"}]};
 
         // Map tags to colors - will be populated dynamically
         const tagColors = {"Features":"#4285F4"};
@@ -242,11 +242,11 @@
                         .style('r', n => isConnected(d, n) && n.id === d.id
                             ? (6 + Math.min(n.connections || 0, 10)) * nodeSizeMultiplier * 1.5
                             : (6 + Math.min(n.connections || 0, 10)) * nodeSizeMultiplier);
-                    
+
                     label.style('opacity', n => isConnected(d, n) ? 1 : 0.15)
                         .select('text')
                         .style('font-weight', n => n.id === d.id ? 'bold' : 'normal');
-                    
+
                     // No background rectangle styling needed
                 })
                 .on('mouseout', function() {
@@ -260,11 +260,11 @@
 
                     node.style('opacity', 1)
                         .style('r', d => (6 + Math.min(d.connections || 0, 10)) * nodeSizeMultiplier);
-                    
+
                     label.style('opacity', 1)
                         .select('text')
                         .style('font-weight', 'normal');
-                    
+
                     // No background rectangle reset needed
                 })
                 .on('click', function(event, d) {
@@ -324,14 +324,6 @@
                     (l.source.id === b.id && l.target.id === a.id)
                 );
             }
-            
-            // Fix all nodes after 3 seconds of simulation to prevent disconnections
-            setTimeout(() => {
-                graphData.nodes.forEach(d => {
-                    d.fx = d.x;
-                    d.fy = d.y;
-                });
-            }, 3000);
         }
 
         // Initialize when DOM is ready
