@@ -155,19 +155,21 @@
                 .translateExtent([[-width, -height], [width * 2, height * 2]])
                 .on('zoom', (event) => {
                     g.attr('transform', event.transform);
-                }));
+                }))
+                // Set initial transform to show graph nicely centered with a slight zoom out
+                .call(d3.zoom().transform, d3.zoomIdentity.translate(width * 0.1, height * 0.1).scale(0.8));
 
             // Create the force simulation
             const nodeSizeMultiplier = 1;
             const simulation = d3.forceSimulation(graphData.nodes)
-                .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(100).strength(1))
-                .force('charge', d3.forceManyBody().strength(-180))
-                .force('center', d3.forceCenter(width / 2, height / 2).strength(0.03))
-                .force('collision', d3.forceCollide().radius(d => (8 + Math.min(d.connections || 0, 10)) * 2))
+                .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(150).strength(0.7))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2).strength(0.05))
+                .force('collision', d3.forceCollide().radius(d => (10 + Math.min(d.connections || 0, 10)) * 2))
                 // No strict boundary force - allow exploration beyond viewport
                 .velocityDecay(0.4)
-                .alphaDecay(0.015)
-                .alpha(0.3)
+                .alphaDecay(0.01)
+                .alpha(0.6)
                 .alphaTarget(0);
 
             // Draw the links
@@ -181,18 +183,46 @@
 
             // Draw the nodes
             // Run simulation several times to stabilize initial positions without animation
-            for (let i = 0; i < 200; i++) {
+            // Run more iterations to get a better initial layout
+            for (let i = 0; i < 500; i++) {
                 simulation.tick();
             }
             
-            // Keep nodes at reasonable distances without strict boundaries
+            // Spread out nodes more evenly for a prettier initial layout
+            // First ensure nodes aren't too close to each other
+            const initialSpreadFactor = 1.5; // Increase this to spread nodes out more
+            
+            // Apply forces multiple times to separate clusters nicely
+            for (let i = 0; i < 50; i++) {
+                graphData.nodes.forEach(nodeA => {
+                    graphData.nodes.forEach(nodeB => {
+                        if (nodeA.id !== nodeB.id) {
+                            // Get distance between nodes
+                            const dx = nodeA.x - nodeB.x;
+                            const dy = nodeA.y - nodeB.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            // If nodes are too close, push them apart
+                            if (distance < 100 * initialSpreadFactor) {
+                                const pushFactor = (100 * initialSpreadFactor - distance) / distance * 0.05;
+                                nodeA.x += dx * pushFactor;
+                                nodeA.y += dy * pushFactor;
+                                nodeB.x -= dx * pushFactor;
+                                nodeB.y -= dy * pushFactor;
+                            }
+                        }
+                    });
+                });
+            }
+            
+            // Then keep nodes at reasonable distances without strict boundaries
             graphData.nodes.forEach(node => {
                 // Gently nudge nodes toward center if they're extremely far out
-                if (Math.abs(node.x - width/2) > width) {
-                    node.x = node.x > width/2 ? width * 1.5 : -width * 0.5;
+                if (Math.abs(node.x - width/2) > width * 1.2) {
+                    node.x = node.x > width/2 ? width * 1.2 : -width * 0.2;
                 }
-                if (Math.abs(node.y - height/2) > height) {
-                    node.y = node.y > height/2 ? height * 1.5 : -height * 0.5;
+                if (Math.abs(node.y - height/2) > height * 1.2) {
+                    node.y = node.y > height/2 ? height * 1.2 : -height * 0.2;
                 }
             });
             
@@ -323,8 +353,8 @@
                     .attr('cx', d => d.x)
                     .attr('cy', d => d.y);
 
-                // Position the label groups
-                label.attr('transform', d => `translate(${d.x + 12}, ${d.y})`);
+                // Position the label groups with a little more space
+                label.attr('transform', d => `translate(${d.x + 15}, ${d.y})`);
             }
 
             // Drag functions
@@ -354,27 +384,61 @@
                 // Apply a small force to keep the simulation active during drag
                 if (!event.active) simulation.alpha(0.3).restart();
                 
-                // Keep non-component nodes reasonably close to their initial positions
-                // but allow for exploration beyond the viewport
-                graphData.nodes.forEach(node => {
-                    if (!node._inDragComponent && !node._isDragging) {
-                        // Find the initial position
-                        const initial = initialPositions.find(p => p.id === node.id);
-                        if (initial) {
-                            // Apply a very weak force toward the initial position
-                            // only if the node is very far from its original position
-                            const dx = initial.x - node.x;
-                            const dy = initial.y - node.y;
+                // Check if any dragged nodes are getting too close to non-component nodes
+                let needsSpacing = false;
+                const minDistance = 100; // Minimum comfortable distance between clusters
+                
+                // Only check for spacing issues if we're actively dragging
+                if (d._isDragging) {
+                    // Get all nodes in the dragged component
+                    const draggedNodes = graphData.nodes.filter(n => n._inDragComponent);
+                    // Get all nodes not in the dragged component
+                    const otherNodes = graphData.nodes.filter(n => !n._inDragComponent);
+                    
+                    // Check if any dragged node is too close to any non-dragged node
+                    for (const draggedNode of draggedNodes) {
+                        for (const otherNode of otherNodes) {
+                            const dx = draggedNode.x - otherNode.x;
+                            const dy = draggedNode.y - otherNode.y;
                             const distance = Math.sqrt(dx*dx + dy*dy);
                             
-                            // Only pull back if node has drifted too far
-                            if (distance > width/2) {
-                                node.x += dx * 0.03;
-                                node.y += dy * 0.03;
+                            if (distance < minDistance) {
+                                needsSpacing = true;
+                                break;
                             }
                         }
+                        if (needsSpacing) break;
                     }
-                });
+                }
+                
+                // Only apply spacing forces if there's an actual proximity issue
+                if (needsSpacing) {
+                    graphData.nodes.forEach(node => {
+                        if (!node._inDragComponent && !node._isDragging) {
+                            // Find the initial position
+                            const initial = initialPositions.find(p => p.id === node.id);
+                            if (initial) {
+                                // Move away from dragged component
+                                const draggedCenter = {
+                                    x: d3.mean(graphData.nodes.filter(n => n._inDragComponent), n => n.x),
+                                    y: d3.mean(graphData.nodes.filter(n => n._inDragComponent), n => n.y)
+                                };
+                                
+                                const dx = node.x - draggedCenter.x;
+                                const dy = node.y - draggedCenter.y;
+                                const distance = Math.sqrt(dx*dx + dy*dy);
+                                
+                                // Apply stronger repulsion the closer nodes are
+                                const repulsionStrength = Math.max(0, (minDistance * 2 - distance) / minDistance) * 0.1;
+                                
+                                if (distance > 0) {
+                                    node.x += dx / distance * repulsionStrength * minDistance;
+                                    node.y += dy / distance * repulsionStrength * minDistance;
+                                }
+                            }
+                        }
+                    });
+                }
             }
 
             function dragended(event, d) {
