@@ -29,10 +29,16 @@ SyMark processes `.sy` files from SiYuan notebooks and generates a static websit
 ### Running SyMark
 
 1. Extract the archive `NotebookName.sy.zip` into the `input` directory in SyMark
-2. Run SyMark:
+2. Run SyMark with an optional theme name:
    ```sh
+   # Use default theme
    cargo run
+   
+   # Use a specific theme
+   cargo run my-theme
    ```
+
+   The first parameter is the theme name to use. If not specified, the "default" theme will be used.
 
 3. The generated website will be in the `output/` directory
 4. Open `output/index.html` in your browser to view your website
@@ -45,6 +51,8 @@ The program will display information about the generation process, including:
 
 ## Customization & Theming
 
+SyMark now supports multiple themes, which can be selected at generation time.
+
 ### Project Structure
 
 SyMark expects the following directory structure:
@@ -55,20 +63,24 @@ symark/
 │   ├── assets/         # Assets from SiYuan (images, etc.)
 │   ├── [note-id]/      # SiYuan note directories
 │   └── [note-id].sy    # SiYuan note files (JSON format)
-├── template/           # HTML and CSS templates
-│   ├── page.html       # HTML template for generated pages
-│   └── styles.css      # CSS styles for the website
+├── themes/             # Directory containing themes
+│   ├── default/        # Default theme (used as fallback)
+│   │   ├── page.html   # HTML template for generated pages
+│   │   ├── styles.css  # CSS styles for the website
+│   │   └── graph.html  # Graph visualization template
+│   └── [theme-name]/   # Additional themes
 └── output/             # Generated website (created by SyMark)
 ```
 
-### Templates
+### Themes and Templates
 
-SyMark uses HTML and CSS templates from the `template/` directory:
+SyMark uses HTML and CSS templates from the `themes/[theme-name]/` directory:
 
 - `page.html`: The base HTML template for all generated pages
 - `styles.css`: The CSS styles for the website
+- `graph.html`: The template for the graph visualization page
 
-If these files don't exist, SyMark will create default templates when first run.
+If these files don't exist for the selected theme, SyMark will attempt to copy them from the default theme. If the default theme doesn't exist, empty templates will be created.
 
 ### Customization
 
@@ -80,7 +92,7 @@ For example, the note "20250506164324-csw026m.sy" in the sample data has the tag
 
 #### Styling
 
-Customize the appearance by editing `template/styles.css`.
+Customize the appearance by editing the CSS file in your theme directory: `themes/[theme-name]/styles.css`.
 
 ## Tags
 
@@ -94,6 +106,7 @@ The generated website includes:
 - `all.html`: Complete list of all notes
 - `tag_[tagname].html`: Pages for each tag collection (e.g., `tag_Features.html`)
 - `[note-id].html`: Individual note pages (e.g., `20250506164324-csw026m.html`)
+- `graph.html`: Interactive visualization of note connections
 
 Each page includes navigation links to easily browse between notes, tags, and the index page.
 
@@ -119,6 +132,7 @@ SyMark is optimized for speed and can process large notebooks efficiently:
 - Processes hundreds of notes in milliseconds
 - Automatically removes zero-width whitespace characters for clean HTML
 - Minimal memory footprint suitable for low-end hardware
+- Theme-based templates for easy customization
 
 ## License
 ```

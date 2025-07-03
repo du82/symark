@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Graph | SyMark</title>
+    <title>Content Graph | {{site_name}}</title>
     <link rel="stylesheet" href="styles.css">
     <style>
         .links line {
@@ -75,7 +75,7 @@
 <body>
     <header class="site-header">
         <div class="header-content">
-            <a href="index.html" class="site-title">SyMark</a>
+            <a href="index.html" class="site-title">{{site_name}}</a>
             <div class="header-icons">
                 <a href="#" class="header-icon" title="Search">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -102,10 +102,13 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
         // Graph data will be populated by the generator
-        const graphData = {"links":[{"source":"20250507101719-g6hylwe","target":"20250506183737-jh03nc2","value":1},{"source":"20250506164324-csw026m","target":"20250506183737-jh03nc2","value":1},{"source":"20250506164324-csw026m","target":"20250507101719-g6hylwe","value":1},{"source":"20250506164324-csw026m","target":"20250508102758-u01h899","value":1},{"source":"20250506164324-csw026m","target":"20250506230139-lnmadl3","value":1},{"source":"20250506164324-csw026m","target":"20250507135108-7plxwem","value":1},{"source":"20250506164324-csw026m","target":"20250507101913-9jo95mk","value":1},{"source":"20250506164324-csw026m","target":"20250615054852-jaujqy6","value":1},{"source":"20250506164324-csw026m","target":"20250616021259-6nf4yjv","value":1}],"nodes":[{"connections":1,"id":"20250508102758-u01h899","tags":[],"title":"Benchmarks"},{"connections":2,"id":"20250506183737-jh03nc2","tags":[],"title":"How to use SyMark"},{"connections":1,"id":"20250507101913-9jo95mk","tags":[],"title":"Build software to last"},{"connections":0,"id":"20250507152346-lt7yop4","tags":[],"title":"Showcase"},{"connections":1,"id":"20250507135108-7plxwem","tags":["Features"],"title":"Templating"},{"connections":1,"id":"20250615054852-jaujqy6","tags":[],"title":"Design philosophy of SyMark"},{"connections":1,"id":"20250506230139-lnmadl3","tags":["Features"],"title":"Themes"},{"connections":2,"id":"20250507101719-g6hylwe","tags":["Features"],"title":"Changelog"},{"connections":8,"id":"20250506164324-csw026m","tags":["index"],"title":"SyMark: Transform Your SiYuan Notes into Beautiful Websites"},{"connections":1,"id":"20250616021259-6nf4yjv","tags":[],"title":"How SyMark works"}]};
+        const graphData = {
+            nodes: [],
+            links: []
+        };
 
         // Map tags to colors - will be populated dynamically
-        const tagColors = {"Features":"#4285F4"};
+        const tagColors = {{tag_colors_json}};
 
         // Get color for a node based on its tags
         function getNodeColor(d) {

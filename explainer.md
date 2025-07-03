@@ -15,9 +15,12 @@ symark/
 ├── input/              # Directory for SiYuan notes
 │   ├── .siyuan/        # SiYuan metadata
 │   └── [note-id].sy    # SiYuan note files (JSON format)
-├── template/           # HTML and CSS templates
-│   ├── page.html       # HTML template for generated pages
-│   └── styles.css      # CSS styles for the website
+├── themes/             # Directory containing themes
+│   ├── default/        # Default theme (used as fallback)
+│   │   ├── page.html   # HTML template for generated pages
+│   │   ├── styles.css  # CSS styles for the website
+│   │   └── graph.html  # Graph visualization template
+│   └── [theme-name]/   # Additional themes
 ├── output/             # Generated website (created by Symark)
 ├── Cargo.toml          # Rust project configuration
 └── Cargo.lock          # Rust dependency lock file
@@ -26,7 +29,7 @@ symark/
 The main workflow involves:
 1. Reading SiYuan notes from the `input/` directory
 2. Processing them using the code in `src/main.rs`
-3. Applying templates from the `template/` directory
+3. Applying templates from the selected theme in the `themes/[theme-name]/` directory
 4. Generating the final website in the `output/` directory
 
 ## SiYuan Integration
@@ -224,23 +227,25 @@ The heart of Symark is its block rendering system. Here's how it works:
 
 This sophisticated rendering pipeline transforms structured note data into a rich, interconnected HTML document collection that preserves the relationships and formatting of the original notes.
 
-## Templates
+## Themes and Templates
 
-Symark uses a templating system to generate consistent HTML pages:
+Symark uses a themeable templating system to generate consistent HTML pages:
 
-1. **HTML Template**: The `template/page.html` file provides the structure for each generated page, with placeholders for:
+1. **HTML Template**: The `themes/[theme-name]/page.html` file provides the structure for each generated page, with placeholders for:
    - Page title
    - Content
    - Navigation elements
    - Metadata
 
-2. **CSS Styling**: The `template/styles.css` file contains all styling for the generated website, including:
+2. **CSS Styling**: The `themes/[theme-name]/styles.css` file contains all styling for the generated website, including:
    - Basic typography and layout
    - Special formatting for different block types
    - Responsive design elements
    - Navigation styling
 
-The templating system allows for consistent presentation across all generated pages while injecting the specific content and structure of each note.
+3. **Graph Template**: The `themes/[theme-name]/graph.html` file provides the structure for the interactive graph visualization page.
+
+The themeable templating system allows for consistent presentation across all generated pages while injecting the specific content and structure of each note. Multiple themes can be created and selected at generation time, with the default theme serving as a fallback when selected themes are missing files.
 
 ## Date Handling
 
@@ -275,7 +280,14 @@ cargo build --release
 
 Basic usage involves:
 1. Placing SiYuan notes in the `input/` directory
-2. Running the Symark executable
+2. Running the Symark executable with an optional theme name:
+   ```
+   # Use default theme
+   cargo run
+   
+   # Use a specific theme (falls back to default theme if files are missing)
+   cargo run my-theme
+   ```
 3. Accessing the generated website from the `output/` directory
 
 The system is designed to be simple to use while providing powerful conversion capabilities.

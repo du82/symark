@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::env;
 use serde::{Deserialize, Serialize};
 use chrono::Local;
 use base64::decode;
@@ -114,8 +115,18 @@ fn read_template(path: &str) -> String {
     match fs::read_to_string(path) {
         Ok(content) => content,
         Err(e) => {
-            eprintln!("Error reading template file {}: {}", path, e);
-            String::new()
+            // Try to read from default theme as fallback
+            let fallback_path = path.replace(&format!("themes/{}/", env::args().nth(1).unwrap_or_else(|| "default".to_string())), "themes/default/");
+            match fs::read_to_string(&fallback_path) {
+                Ok(content) => {
+                    println!("Read template from fallback path: {}", fallback_path);
+                    content
+                },
+                Err(_) => {
+                    eprintln!("Error reading template file {}: {}", path, e);
+                    String::new()
+                }
+            }
         }
     }
 }
@@ -317,30 +328,79 @@ fn main() -> std::io::Result<()> {
     let mut page_count = 0;
 
     println!("Starting SyMark generator...");
-
-    let template_dir = PathBuf::from("template");
-    println!("Template directory: {:?}", template_dir);
-    if !template_dir.exists() {
-        println!("Creating template directory...");
-        fs::create_dir_all(&template_dir)?;
-
-        let html_template = read_template("template/page.html");
-        let css_template = read_template("template/styles.css");
-        let graph_template = read_template("template/graph.html");
-
-        let cleaned_html_template = remove_zero_width_spaces(&html_template);
-        let mut html_file = File::create(template_dir.join("page.html"))?;
-        html_file.write_all(cleaned_html_template.as_bytes())?;
-
-        let cleaned_css_template = remove_zero_width_spaces(&css_template);
-        let mut css_file = File::create(template_dir.join("styles.css"))?;
-        css_file.write_all(cleaned_css_template.as_bytes())?;
-
-        let cleaned_graph_template = remove_zero_width_spaces(&graph_template);
-        let mut graph_file = File::create(template_dir.join("graph.html"))?;
-        graph_file.write_all(cleaned_graph_template.as_bytes())?;
-
-        println!("Created template files in {:?}", template_dir);
+    
+    // Get theme from command line arguments or use default
+    let args: Vec<String> = env::args().collect();
+    let theme_name = if args.len() > 1 {
+        args[1].clone()
+    } else {
+        "default".to_string()
+    };
+    
+    println!("Using theme: {}", theme_name);
+    
+    let themes_dir = PathBuf::from("themes");
+    let theme_dir = themes_dir.join(&theme_name);
+    
+    // Create themes directory if it doesn't exist
+    if !themes_dir.exists() {
+        println!("Creating themes directory...");
+        fs::create_dir_all(&themes_dir)?;
+    }
+    
+    // If the selected theme doesn't exist, create it
+    if !theme_dir.exists() {
+        println!("Creating theme directory: {:?}", theme_dir);
+        fs::create_dir_all(&theme_dir)?;
+        
+        // Check if default theme exists to copy from
+        let default_theme_dir = themes_dir.join("default");
+        if default_theme_dir.exists() && fs::read_dir(&default_theme_dir)?.next().is_some() {
+            println!("Copying files from default theme to new theme directory...");
+            
+            // Copy page.html
+            if let Ok(html_template) = fs::read_to_string(default_theme_dir.join("page.html")) {
+                let cleaned_html_template = remove_zero_width_spaces(&html_template);
+                let mut html_file = File::create(theme_dir.join("page.html"))?;
+                html_file.write_all(cleaned_html_template.as_bytes())?;
+            }
+            
+            // Copy styles.css
+            if let Ok(css_template) = fs::read_to_string(default_theme_dir.join("styles.css")) {
+                let cleaned_css_template = remove_zero_width_spaces(&css_template);
+                let mut css_file = File::create(theme_dir.join("styles.css"))?;
+                css_file.write_all(cleaned_css_template.as_bytes())?;
+            }
+            
+            // Copy graph.html
+            if let Ok(graph_template) = fs::read_to_string(default_theme_dir.join("graph.html")) {
+                let cleaned_graph_template = remove_zero_width_spaces(&graph_template);
+                let mut graph_file = File::create(theme_dir.join("graph.html"))?;
+                graph_file.write_all(cleaned_graph_template.as_bytes())?;
+            }
+            
+            println!("Copied default theme files to new theme directory: {:?}", theme_dir);
+        } else {
+            // Create empty template files if default theme doesn't exist
+            println!("Creating empty template files in theme directory...");
+            let html_template = String::new();
+            let css_template = String::new();
+            let graph_template = String::new();
+            
+            let cleaned_html_template = remove_zero_width_spaces(&html_template);
+            let mut html_file = File::create(theme_dir.join("page.html"))?;
+            html_file.write_all(cleaned_html_template.as_bytes())?;
+            
+            let cleaned_css_template = remove_zero_width_spaces(&css_template);
+            let mut css_file = File::create(theme_dir.join("styles.css"))?;
+            css_file.write_all(cleaned_css_template.as_bytes())?;
+            
+            let cleaned_graph_template = remove_zero_width_spaces(&graph_template);
+            let mut graph_file = File::create(theme_dir.join("graph.html"))?;
+            graph_file.write_all(cleaned_graph_template.as_bytes())?;
+            
+            println!("Created empty template files in theme directory: {:?}", theme_dir);
+        }
     }
 
     let output_dir = PathBuf::from("output");
@@ -360,7 +420,8 @@ fn main() -> std::io::Result<()> {
     find_and_copy_assets(Path::new("input"), &assets_dir)?;
 
     println!("Reading CSS template...");
-    let css_template = read_template("template/styles.css");
+    let css_template_path = format!("themes/{}/styles.css", theme_name);
+    let css_template = read_template(&css_template_path);
     let cleaned_css = remove_zero_width_spaces(&css_template);
     let css_path = output_dir.join("styles.css");
     println!("Writing CSS to: {:?}", css_path);
@@ -418,7 +479,8 @@ fn main() -> std::io::Result<()> {
     }
 
     println!("Reading HTML template...");
-    let html_template = read_template("template/page.html");
+    let html_template_path = format!("themes/{}/page.html", theme_name);
+    let html_template = read_template(&html_template_path);
 
 
     if let Some(index_id) = &index_note_id {
@@ -451,7 +513,8 @@ fn main() -> std::io::Result<()> {
     }
 
     println!("Generating graph page...");
-    let graph_template = read_template("template/graph.html");
+    let graph_template_path = format!("themes/{}/graph.html", theme_name);
+    let graph_template = read_template(&graph_template_path);
     generate_graph_page(&notes_map, &output_dir, &all_tags, &graph_template)?;
     page_count += 1;
 
