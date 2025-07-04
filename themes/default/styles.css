@@ -569,7 +569,6 @@ a {
 /* Lists */
 .article-content ul,
 .article-content ol {
-    margin-bottom: 16px;
     padding-left: 24px; /* Keep bullets/numbers within content area */
     color: var(--text-secondary);
 }
