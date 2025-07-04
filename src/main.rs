@@ -328,7 +328,7 @@ fn main() -> std::io::Result<()> {
     let mut page_count = 0;
 
     println!("Starting SyMark generator...");
-    
+
     // Get theme from command line arguments or use default
     let args: Vec<String> = env::args().collect();
     let theme_name = if args.len() > 1 {
@@ -336,49 +336,49 @@ fn main() -> std::io::Result<()> {
     } else {
         "default".to_string()
     };
-    
+
     println!("Using theme: {}", theme_name);
-    
+
     let themes_dir = PathBuf::from("themes");
     let theme_dir = themes_dir.join(&theme_name);
-    
+
     // Create themes directory if it doesn't exist
     if !themes_dir.exists() {
         println!("Creating themes directory...");
         fs::create_dir_all(&themes_dir)?;
     }
-    
+
     // If the selected theme doesn't exist, create it
     if !theme_dir.exists() {
         println!("Creating theme directory: {:?}", theme_dir);
         fs::create_dir_all(&theme_dir)?;
-        
+
         // Check if default theme exists to copy from
         let default_theme_dir = themes_dir.join("default");
         if default_theme_dir.exists() && fs::read_dir(&default_theme_dir)?.next().is_some() {
             println!("Copying files from default theme to new theme directory...");
-            
+
             // Copy page.html
             if let Ok(html_template) = fs::read_to_string(default_theme_dir.join("page.html")) {
                 let cleaned_html_template = remove_zero_width_spaces(&html_template);
                 let mut html_file = File::create(theme_dir.join("page.html"))?;
                 html_file.write_all(cleaned_html_template.as_bytes())?;
             }
-            
+
             // Copy styles.css
             if let Ok(css_template) = fs::read_to_string(default_theme_dir.join("styles.css")) {
                 let cleaned_css_template = remove_zero_width_spaces(&css_template);
                 let mut css_file = File::create(theme_dir.join("styles.css"))?;
                 css_file.write_all(cleaned_css_template.as_bytes())?;
             }
-            
+
             // Copy graph.html
             if let Ok(graph_template) = fs::read_to_string(default_theme_dir.join("graph.html")) {
                 let cleaned_graph_template = remove_zero_width_spaces(&graph_template);
                 let mut graph_file = File::create(theme_dir.join("graph.html"))?;
                 graph_file.write_all(cleaned_graph_template.as_bytes())?;
             }
-            
+
             println!("Copied default theme files to new theme directory: {:?}", theme_dir);
         } else {
             // Create empty template files if default theme doesn't exist
@@ -386,19 +386,19 @@ fn main() -> std::io::Result<()> {
             let html_template = String::new();
             let css_template = String::new();
             let graph_template = String::new();
-            
+
             let cleaned_html_template = remove_zero_width_spaces(&html_template);
             let mut html_file = File::create(theme_dir.join("page.html"))?;
             html_file.write_all(cleaned_html_template.as_bytes())?;
-            
+
             let cleaned_css_template = remove_zero_width_spaces(&css_template);
             let mut css_file = File::create(theme_dir.join("styles.css"))?;
             css_file.write_all(cleaned_css_template.as_bytes())?;
-            
+
             let cleaned_graph_template = remove_zero_width_spaces(&graph_template);
             let mut graph_file = File::create(theme_dir.join("graph.html"))?;
             graph_file.write_all(cleaned_graph_template.as_bytes())?;
-            
+
             println!("Created empty template files in theme directory: {:?}", theme_dir);
         }
     }
@@ -941,7 +941,7 @@ fn generate_all_notes_page(
         text: "Tags".to_string(),
         level: 2,
     });
-    
+
     toc_items.push(TocItem {
         id: "section-graph".to_string(),
         text: "Content Graph".to_string(),
@@ -978,11 +978,6 @@ fn generate_all_notes_page(
     content.push_str("<h2 id=\"section-tags\">Tags</h2>\n<div class=\"tags-container\">\n");
     content.push_str(&tags_html);
     content.push_str("</div>");
-    
-    // Add graph visualization section
-    content.push_str("<h2 id=\"section-graph\">Content Graph</h2>\n");
-    content.push_str("<p>Explore the connections between notes in an interactive visualization.</p>\n");
-    content.push_str("<p><a href=\"graph.html\" class=\"nav-link\">View Content Graph</a></p>\n");
 
     html = html.replace("{{content}}", &content);
 
@@ -1079,7 +1074,7 @@ fn generate_index_page(
         text: "Tags".to_string(),
         level: 2,
     });
-    
+
     toc_items.push(TocItem {
         id: "section-graph".to_string(),
         text: "Content Graph".to_string(),
@@ -1116,7 +1111,7 @@ fn generate_index_page(
     content.push_str("<h2 id=\"section-tags\">Tags</h2>\n<div class=\"tags-container\">\n");
     content.push_str(&tags_html);
     content.push_str("</div>");
-    
+
     // Add graph visualization section
     content.push_str("<h2 id=\"section-graph\">Content Graph</h2>\n");
     content.push_str("<p>Explore the connections between notes in an interactive visualization.</p>\n");
@@ -1169,11 +1164,11 @@ fn generate_graph_page(
         "#607D8B", // Blue-gray
         "#E91E63", // Pink
     ];
-    
+
     // Map tags to colors
     let mut tag_colors = HashMap::new();
     let mut color_index = 0;
-    
+
     for tag in all_tags {
         if color_index < predefined_colors.len() {
             tag_colors.insert(tag.clone(), predefined_colors[color_index].to_string());
@@ -1243,10 +1238,10 @@ fn generate_graph_page(
         "nodes": nodes,
         "links": links
     });
-    
+
     // Create tag color JSON
     let tag_colors_json = json!(tag_colors);
-    
+
     // Generate tag color HTML blocks
     let mut tag_color_blocks = String::new();
     for (tag, color) in &tag_colors {
@@ -1262,30 +1257,30 @@ fn generate_graph_page(
 
     // Process the graph template
     let mut graph_html = graph_template.to_string();
-    
+
     // Replace template variables
     graph_html = graph_html.replace("{{site_name}}", "SyMark");
-    
+
     // Remove tag colors section since we're using a full-screen layout
     graph_html = graph_html.replace("{{#tag_colors}}", "<!-- ");
     graph_html = graph_html.replace("{{/tag_colors}}", " -->");
     graph_html = graph_html.replace("{{tag_color_blocks}}", "");
-    
+
     // Insert the tag colors JSON
     graph_html = graph_html.replace("{{tag_colors_json}}", &tag_colors_json.to_string());
-    
+
     // Insert the graph data
-    graph_html = graph_html.replace("const graphData = {\n            nodes: [],\n            links: []\n        };", 
+    graph_html = graph_html.replace("const graphData = {\n            nodes: [],\n            links: []\n        };",
                                    &format!("const graphData = {};", graph_data.to_string()));
 
     // Generate the HTML file
     let output_path = output_dir.join("graph.html");
     let mut file = File::create(&output_path)?;
-    
+
     // Clean up any remaining template variables
     let cleaned_html = remove_zero_width_spaces(&graph_html);
     let cleaned_html = cleanup_template_variables(&cleaned_html);
-    
+
     file.write_all(cleaned_html.as_bytes())?;
 
     println!("Generated graph page: {:?}", output_path);
