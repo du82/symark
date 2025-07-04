@@ -1,7 +1,7 @@
 /* Base styles and variables */
 :root {
     /* Light theme variables */
-    --content-width: 640px;
+    --content-width: 700px;
     --font-body: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
     --font-heading: var(--font-body);
     --text-color: #000;
@@ -34,6 +34,47 @@
     --header-height: 48px;
     --header-bg-color: #ffffff;
     --header-border-color: var(--border-color);
+
+    /* Default SiYuan colors */
+    --b3-theme-primary: #3573f0;
+    --b3-theme-primary-light: rgba(53, 115, 240, .72);
+    --b3-theme-primary-lighter: rgba(53, 115, 240, .48);
+    --b3-theme-primary-lightest: rgba(53, 115, 240, .24);
+    --b3-theme-secondary: #f3a92f;
+    --b3-theme-background: #1e1e1e;
+    --b3-theme-background-light: rgba(255, 255, 255, .075);
+    --b3-theme-surface: #262626;
+    --b3-theme-surface-light: rgba(41, 42, 45, .86);
+    --b3-theme-surface-lighter: rgba(230, 230, 230, .06);
+    --b3-theme-error: #d23f31;
+    --b3-theme-success: #65b84d;
+    --b3-theme-on-primary: #fff;
+    --b3-theme-on-secondary: #fff;
+    --b3-theme-on-background: #dadada;
+    --b3-theme-on-surface: #9aa0a6;
+    --b3-theme-on-surface-light: #bababa;
+    --b3-theme-on-error: #fff;
+    /* Background colors */
+    --b3-font-background5: #e2e3e4;
+    --b3-font-background6: #acd0fc;
+    --b3-font-background7: #fddaab;
+    --b3-font-background8: #ffb0a9;
+    --b3-font-background9: #fdbfff;
+    --b3-font-background10: #b1ffff;
+    --b3-font-background11: #affad1;
+    --b3-font-background12: #fff88f;
+    --b3-font-color1: #3573f0;
+    --b3-font-color2: var(--b3-card-warning-color);
+    --b3-font-color3: var(--b3-card-info-color);
+    --b3-font-color4: var(--b3-card-success-color);
+    --b3-font-color5: #9aa0a6;
+    --b3-font-color6: #3573f0;
+    --b3-font-color7: #f3a92f;
+    --b3-font-color8: #d23f31;
+    --b3-font-color9: #f5539e;
+    --b3-font-color10: #00eeff;
+    --b3-font-color11: #74ff00;
+    --b3-font-color12: #fff200;
 }
 
 /* Dark theme using prefers-color-scheme */
@@ -62,6 +103,46 @@
         --primary-box-shadow-color: rgba(0, 0, 0, 0.5);
         --header-bg-color: #242729;
         --header-border-color: #393d40;
+        /* Default SiYuan colors */
+        --b3-theme-primary: #3573f0;
+        --b3-theme-primary-light: rgba(53, 115, 240, .72);
+        --b3-theme-primary-lighter: rgba(53, 115, 240, .48);
+        --b3-theme-primary-lightest: rgba(53, 115, 240, .24);
+        --b3-theme-secondary: #f3a92f;
+        --b3-theme-background: #1e1e1e;
+        --b3-theme-background-light: rgba(255, 255, 255, .075);
+        --b3-theme-surface: #262626;
+        --b3-theme-surface-light: rgba(41, 42, 45, .86);
+        --b3-theme-surface-lighter: rgba(230, 230, 230, .06);
+        --b3-theme-error: #d23f31;
+        --b3-theme-success: #65b84d;
+        --b3-theme-on-primary: #fff;
+        --b3-theme-on-secondary: #fff;
+        --b3-theme-on-background: #dadada;
+        --b3-theme-on-surface: #9aa0a6;
+        --b3-theme-on-surface-light: #bababa;
+        --b3-theme-on-error: #fff;
+        /* Background colors */
+        --b3-font-background5: #4c5257;
+        --b3-font-background6: #08296c;
+        --b3-font-background7: #593905;
+        --b3-font-background8: #541812;
+        --b3-font-background9: #843473;
+        --b3-font-background10: #329096;
+        --b3-font-background11: #568b2a;
+        --b3-font-background12: #8d8829;
+        --b3-font-color1: #3573f0;
+        --b3-font-color2: var(--b3-card-warning-color);
+        --b3-font-color3: var(--b3-card-info-color);
+        --b3-font-color4: var(--b3-card-success-color);
+        --b3-font-color5: #9aa0a6;
+        --b3-font-color6: #3573f0;
+        --b3-font-color7: #f3a92f;
+        --b3-font-color8: #d23f31;
+        --b3-font-color9: #f5539e;
+        --b3-font-color10: #00eeff;
+        --b3-font-color11: #74ff00;
+        --b3-font-color12: #fff200;
     }
 }
 
@@ -709,8 +790,8 @@ a {
 .article-content .warning-box,
 .article-content .success-box,
 .article-content .error-box {
-    padding: 16px;
-   border-radius: 6px;
+    padding: 6px;
+    border-radius: 6px;
     margin-bottom: 16px;
 }
 
@@ -740,8 +821,6 @@ a {
 .article-content strong.inline-info-box {
     background-color: var(--info-bg);
     color: var(--info-color);
-    padding: 2px 4px;
-    border-radius: 2px;
     margin: 0;
     display: inline;
 }
@@ -751,8 +830,6 @@ a {
 .article-content strong.inline-success-box {
     background-color: var(--success-bg);
     color: var(--success-color);
-    padding: 2px 4px;
-    border-radius: 2px;
     margin: 0;
     display: inline;
 }
@@ -762,8 +839,6 @@ a {
 .article-content strong.inline-warning-box {
     background-color: var(--warning-bg);
     color: var(--warning-color);
-    padding: 2px 4px;
-    border-radius: 2px;
     margin: 0;
     display: inline;
 }
@@ -773,8 +848,6 @@ a {
 .article-content strong.inline-error-box {
     background-color: var(--error-bg);
     color: var(--error-color);
-    padding: 2px 4px;
-    border-radius: 2px;
     margin: 0;
     display: inline;
 }
@@ -825,7 +898,7 @@ a {
     min-width: 20px;
     height: 20px;
     margin-right: 10px;
-    border: 2px solid #bdc3c7;
+    border: 1px solid #bdc3c7;
     border-radius: 2px;
     background-color: var(--bg-color);
     border-color: var(--border-color);
