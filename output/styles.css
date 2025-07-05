@@ -870,6 +870,7 @@ a {
 
 /* Info boxes - block level */
 .article-content .info-box,
+.article-content .success-box,
 .article-content .warning-box,
 .article-content .error-box,
 .article-content .custom-box {

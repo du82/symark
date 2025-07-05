@@ -92,20 +92,14 @@ struct Block {
 }
 
 fn get_style_class(style: &str, is_inline: bool) -> (Option<String>, bool) {
-    // First determine if it's a predefined style (info, success, warning, error)
-    let is_predefined = style.contains("var(--b3-card-info-background)") || 
-                        style.contains("var(--b3-card-success-background)") ||
-                        style.contains("var(--b3-card-warning-background)") || 
-                        style.contains("var(--b3-card-error-background)");
-                        
-    // Then determine the base class
-    let base_class = if style.contains("var(--b3-card-info-background)") && style.contains("var(--b3-card-info-color)") {
+    // First determine the base class by looking at the style characteristics
+    let base_class = if style.contains("var(--b3-card-info-background)") {
         "info-box"
-    } else if style.contains("var(--b3-card-success-background)") && style.contains("var(--b3-card-success-color)") {
+    } else if style.contains("var(--b3-card-success-background)") {
         "success-box"
-    } else if style.contains("var(--b3-card-warning-background)") && style.contains("var(--b3-card-warning-color)") {
+    } else if style.contains("var(--b3-card-warning-background)") {
         "warning-box"
-    } else if style.contains("var(--b3-card-error-background)") && style.contains("var(--b3-card-error-color)") {
+    } else if style.contains("var(--b3-card-error-background)") {
         "error-box"
     } else if style.contains("background-color:") || style.contains("background-color=") ||
               style.contains("background:") || style.contains("--b3-parent-background") {
@@ -114,6 +108,12 @@ fn get_style_class(style: &str, is_inline: bool) -> (Option<String>, bool) {
     } else {
         return (None, false);
     };
+    
+    // Determine if it's a predefined style (info, success, warning, error)
+    let is_predefined = style.contains("var(--b3-card-info-background)") || 
+                        style.contains("var(--b3-card-success-background)") ||
+                        style.contains("var(--b3-card-warning-background)") || 
+                        style.contains("var(--b3-card-error-background)");
 
     // Keep original style for custom backgrounds, but not for predefined styles
     // This allows custom backgrounds to retain their color while using predefined CSS for info/warning/etc boxes
