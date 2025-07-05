@@ -160,6 +160,10 @@
     pointer-events: none;
 }
 
+.toc-toggle-input:focus {
+    outline: none;
+}
+
 /* TOC Sidebar Styles */
 .toc-sidebar {
     position: fixed;
@@ -177,6 +181,7 @@
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
     will-change: right;
+    overscroll-behavior: contain;
 }
 
 #toc-sidebar::-webkit-scrollbar {
@@ -296,6 +301,7 @@
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.3s ease;
+    overscroll-behavior: contain;
 }
 
 /* Mobile styles */
@@ -311,6 +317,14 @@
     transition: margin-right 0.3s ease;
     position: relative;
     min-height: 100vh;
+    z-index: 1;
+}
+
+/* Improve TOC toggle label behavior */
+label[for="toc-toggle"] {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 /* For keyboard accessibility - focus styles */
@@ -340,6 +354,9 @@
 
 html {
     font-size: 16px;
+    scroll-behavior: smooth;
+    overflow-anchor: auto;
+    scroll-padding-top: 0;
 }
 
 body {
