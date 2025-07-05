@@ -871,8 +871,8 @@ a {
 /* Info boxes - block level */
 .article-content .info-box,
 .article-content .warning-box,
-.article-content .success-box,
-.article-content .error-box {
+.article-content .error-box,
+.article-content .custom-box {
     padding: 6px;
     border-radius: 6px;
     margin-bottom: 16px;

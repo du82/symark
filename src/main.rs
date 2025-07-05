@@ -91,7 +91,14 @@ struct Block {
     TaskListItemChecked: bool,
 }
 
-fn get_style_class(style: &str, is_inline: bool) -> Option<String> {
+fn get_style_class(style: &str, is_inline: bool) -> (Option<String>, bool) {
+    // First determine if it's a predefined style (info, success, warning, error)
+    let is_predefined = style.contains("var(--b3-card-info-background)") || 
+                        style.contains("var(--b3-card-success-background)") ||
+                        style.contains("var(--b3-card-warning-background)") || 
+                        style.contains("var(--b3-card-error-background)");
+                        
+    // Then determine the base class
     let base_class = if style.contains("var(--b3-card-info-background)") && style.contains("var(--b3-card-info-color)") {
         "info-box"
     } else if style.contains("var(--b3-card-success-background)") && style.contains("var(--b3-card-success-color)") {
@@ -100,14 +107,25 @@ fn get_style_class(style: &str, is_inline: bool) -> Option<String> {
         "warning-box"
     } else if style.contains("var(--b3-card-error-background)") && style.contains("var(--b3-card-error-color)") {
         "error-box"
+    } else if style.contains("background-color:") || style.contains("background-color=") ||
+              style.contains("background:") || style.contains("--b3-parent-background") {
+        // Apply custom-box class to any block with a background color
+        "custom-box"
     } else {
-        return None;
+        return (None, false);
     };
 
+    // Keep original style for custom backgrounds, but not for predefined styles
+    // This allows custom backgrounds to retain their color while using predefined CSS for info/warning/etc boxes
+    let keep_style = !is_predefined && (
+        style.contains("background-color:") || style.contains("background-color=") ||
+        style.contains("background:") || style.contains("--b3-parent-background")
+    );
+
     if is_inline {
-        Some(format!("inline-{}", base_class))
+        (Some(format!("inline-{}", base_class)), keep_style)
     } else {
-        Some(base_class.to_string())
+        (Some(base_class.to_string()), keep_style)
     }
 }
 
@@ -1991,10 +2009,17 @@ fn render_blocks(
 
                 // Check if paragraph has special styling
                 if !block.Properties.style.is_empty() {
-                    if let Some(class_name) = get_style_class(&block.Properties.style, false) {
+                    let (class_name_opt, keep_style) = get_style_class(&block.Properties.style, false);
+                    
+                    let has_class = if let Some(ref class_name) = class_name_opt {
                         class_attr = format!(" class=\"{}\"", class_name);
+                        true
                     } else {
-                        // Keep the original style if no special class is applied
+                        false
+                    };
+                    
+                    // Keep the original style if needed
+                    if keep_style || !has_class {
                         style_attr = format!(" style=\"{}\"", block.Properties.style);
                     }
                 }
@@ -2278,12 +2303,12 @@ fn render_blocks(
                 if !image_src.is_empty() {
                     // Check if we have a caption, if so we'll use a figure/figcaption structure
                     let has_caption = !caption.is_empty();
-                    
+
                     // If we have a caption, open a figure element
                     if has_caption {
                         html.push_str(&format!("<figure{} class=\"image-with-caption\">", id_attr));
                     }
-                    
+
                     // If parent styling is present, wrap the image in a div with that styling
                     if !parent_style_attr.is_empty() {
                         let wrapper_id = if !block.ID.is_empty() && !has_caption {
@@ -2302,7 +2327,7 @@ fn render_blocks(
                             alt_text,
                             style_attr
                         ));
-                        
+
                         // Close the parent div
                         html.push_str("</div>");
                     } else {
@@ -2317,14 +2342,14 @@ fn render_blocks(
                             style_attr
                         ));
                     }
-                    
+
                     // Add figcaption if we have a caption
                     if has_caption {
                         html.push_str(&format!(
                             "<figcaption>{}</figcaption>",
                             escape_html(&caption)
                         ));
-                        
+
                         // Close the figure
                         html.push_str("</figure>");
                     }
@@ -2450,13 +2475,27 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
 
             // Check if there are style properties for special highlights
             if !block.Properties.style.is_empty() {
-                if let Some(class_name) = get_style_class(&block.Properties.style, true) {
-                    html.push_str(&format!(
-                        "<strong{} class=\"{}\">{}",
-                        id_attr,
-                        class_name,
-                        content
-                    ));
+                let (class_name_opt, keep_style) = get_style_class(&block.Properties.style, true);
+                
+                if let Some(ref class_name) = class_name_opt {
+                    if keep_style {
+                        // Apply both class and style
+                        html.push_str(&format!(
+                            "<strong{} class=\"{}\" style=\"{}\">{}",
+                            id_attr,
+                            class_name,
+                            block.Properties.style,
+                            content
+                        ));
+                    } else {
+                        // Apply just the class
+                        html.push_str(&format!(
+                            "<strong{} class=\"{}\">{}",
+                            id_attr,
+                            class_name,
+                            content
+                        ));
+                    }
                 } else {
                     // Use inline style for custom colors
                     html.push_str(&format!(
@@ -2545,25 +2584,41 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 let tag_open = if block.TextMarkType == "text strong" { "<strong" } else { "<span" };
                 let tag_close = if block.TextMarkType == "text strong" { "</strong>" } else { "</span>" };
 
-                if let Some(class_name) = get_style_class(&block.Properties.style, true) {
-                    html.push_str(&format!(
-                        "{}{} class=\"{}\">{}",
-                        tag_open,
-                        id_attr,
-                        class_name,
-                        content
-                    ));
+                let (class_name_opt, keep_style) = get_style_class(&block.Properties.style, true);
+                
+                if let Some(ref class_name) = class_name_opt {
+                    if keep_style {
+                        // Apply both class and style
+                        html.push_str(&format!(
+                            "{}{} class=\"{}\" style=\"{}\">{}{}",
+                            tag_open,
+                            id_attr,
+                            class_name,
+                            block.Properties.style,
+                            content,
+                            tag_close
+                        ));
+                    } else {
+                        // Apply just the class
+                        html.push_str(&format!(
+                            "{}{} class=\"{}\">{}{}",
+                            tag_open,
+                            id_attr,
+                            class_name,
+                            content,
+                            tag_close
+                        ));
+                    }
                 } else {
-                    // Use inline style for custom colors
                     html.push_str(&format!(
-                        "{}{} style=\"{}\">{}",
+                        "{}{} style=\"{}\">{}{}",
                         tag_open,
                         id_attr,
                         block.Properties.style,
-                        content
+                        content,
+                        tag_close
                     ));
                 }
-                html.push_str(tag_close);
             } else {
                 html.push_str(&escape_html(&block.TextMarkTextContent));
             }
