@@ -686,6 +686,33 @@ a {
     border-collapse: collapse;
     margin-bottom: 16px;
     font-size: 14px;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) var(--bg-color);
+    position: relative;
+}
+
+/* Custom scrollbars for tables */
+.article-content table::-webkit-scrollbar {
+    height: 8px;
+    background-color: var(--bg-color);
+}
+
+.article-content table::-webkit-scrollbar-track {
+    background: var(--bg-color);
+    border-radius: 4px;
+}
+
+.article-content table::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 4px;
+}
+
+.article-content table::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-color);
 }
 
 .article-content th,
@@ -707,13 +734,16 @@ a {
 
 .article-content td {
     color: var(--text-secondary);
+    min-width: 100px; /* Prevent cells from becoming too narrow */
 }
 
-/* Make tables responsive */
+/* Additional mobile styles */
 @media (max-width: 640px) {
     .article-content table {
-        overflow-x: auto;
-        white-space: nowrap;
+        border-radius: 4px;
+        white-space: nowrap; /* Prevent text wrapping on mobile */
+        box-shadow: 0 0 2px rgba(0, 0, 0, 0.1); /* Subtle shadow to indicate scrollable area */
+        margin-bottom: 12px; /* Make room for scrollbar */
     }
 
     .header-icons {
