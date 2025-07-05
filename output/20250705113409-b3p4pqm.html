@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started with SyMark | SyMark</title>
+    <link rel="stylesheet" href="styles.css">
+    <meta name="description" content="Welcome to SyMark, an open-source static site generator that transforms your SiYuan notebooks into beautiful, responsive websites. This guide will help you get up and running quickly, even if you&...">
+
+    <!-- OpenGraph Tags -->
+    <meta property="og:title" content="Getting Started with SyMark">
+    <meta property="og:description" content="Welcome to SyMark, an open-source static site generator that transforms your SiYuan notebooks into beautiful, responsive websites. This guide will help you get up and running quickly, even if you&...">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://du82.github.io/symark20250705113409-b3p4pqm.html">
+    <meta property="og:site_name" content="SyMark">
+    <meta property="og:locale" content="en_US">
+    
+    <meta property="article:published_time" content="2025-07-05T11:34:09Z">
+    <meta property="article:modified_time" content="2025-07-05T11:42:53Z">
+</head>
+<body class="toc-enabled">
+    <input type="checkbox" id="toc-toggle" class="toc-toggle-input">
+    <header class="site-header">
+        <div class="header-content">
+            <a href="index.html" class="site-title">SyMark</a>
+            <div class="header-icons">
+                <a href="#" class="header-icon" title="Search">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </a>
+                <a href="graph.html" class="header-icon" title="Content Graph">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="6" r="3"></circle>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <circle cx="18" cy="18" r="3"></circle>
+                        <line x1="10.5" y1="8.5" x2="7.5" y2="15.5"></line>
+                        <line x1="13.5" y1="8.5" x2="16.5" y2="15.5"></line>
+                        <line x1="9" y1="18" x2="15" y2="18"></line>
+                    </svg>
+                </a>
+                <label for="toc-toggle" class="header-icon" title="Table of Contents">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <label for="toc-toggle" id="toc-overlay"></label>
+    <aside id="toc-sidebar" class="toc-sidebar">
+        <div class="toc-header">
+            <p class="toc-title">Table of Contents</p>
+            <label for="toc-toggle" class="header-icon" title="Close table of contents">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </label>
+        </div>
+        <nav class="toc-nav">
+            <ul class="toc-list">
+                <li class="toc-item"><a class="toc-link" href="#20250705113624-7paoz1g">What is SyMark?</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113704-jjoxv5v">Download binaries!</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113731-ptvrpm8">Compile it yourself:</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-33o9xcv">Prerequisites</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-5mvhrzx">Step 1: Install Rust</a></li>
+<li class="toc-item toc-subitem"><a class="toc-link" href="#20250705113624-err3do9">Windows</a></li>
+<li class="toc-item toc-subitem"><a class="toc-link" href="#20250705113624-w0yub6e">macOS / Linux</a></li>
+<li class="toc-item toc-subitem"><a class="toc-link" href="#20250705113624-k9u0slv">Verify Installation</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-zxto5gs">Step 2: Install SiYuan</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-sgjeujt">Step 3: Get SyMark</a></li>
+<li class="toc-item toc-subitem"><a class="toc-link" href="#20250705113624-kbxkubw">Option A: Using Git</a></li>
+<li class="toc-item toc-subitem"><a class="toc-link" href="#20250705113624-jolpnb4">Option B: Download ZIP</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-xtcligt">Step 4: Prepare Your SiYuan Notes</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-tn1y5mc">Step 5: Run SyMark</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-cm6o145">Step 6: View Your Generated Website</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-eb8g60i">Customization</a></li>
+<li class="toc-item toc-subitem"><a class="toc-link" href="#20250705113624-jmtcyn2">Custom Index Page</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-qoskbpx">Troubleshooting</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-vb62clg">Common Issues</a></li>
+<li class="toc-item"><a class="toc-link" href="#20250705113624-mck8gvt">Additional Resources</a></li>
+
+            </ul>
+            <div class="toc-footer">
+                <small>Click headings to navigate</small>
+            </div>
+        </nav>
+    </aside>
+
+    <div class="content-wrapper">
+        <div class="container">
+            <a href="index.html" class="back-link">Back to home<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg></a>
+            <main>
+            <div class="article-header">
+                <!-- 
+                <div class="header-image" style=""></div>
+                 -->
+                <div class="article-meta tag-cloud">
+                    <span class="meta-tag date-tag">Created: July 5th, 2025</span><span class="meta-tag date-tag">Updated: July 5th, 2025</span>
+                </div>
+                <div class="title-container">
+                    <h1 class="article-title">Getting Started with SyMark</h1>
+                </div>
+            </div>
+
+            <div class="article-content">
+                <p id="20250705113624-goi1g27">Welcome to SyMark, an open-source static site generator that transforms your SiYuan notebooks into beautiful, responsive websites. This guide will help you get up and running quickly, even if you&#39;re new to both SiYuan and Rust.</p>
+<h2 id="20250705113624-7paoz1g">What is SyMark?</h2>
+<p id="20250705113624-zz4gjgb">SyMark takes your SiYuan notes (stored as <code>.sy</code> files) and converts them into an interconnected website. All your carefully crafted notes are preserved and rendered beautifully for the web.</p>
+<h2 id="20250705113704-jjoxv5v">Download binaries!</h2>
+<p id="20250705113712-vdw5v10">You can get binaries on the <a href="https://github.com/du82/symark/releases/latest" target="_blank" class="link">GitHub releases page</a>. To run, type <code>./symark</code> if you&#39;re on Linux or Mac. Make sure you also grab the <code>input</code>, <code>output</code>, and <code>themes</code> folders and leave them in the same directory with the binary.</p>
+<h2 id="20250705113731-ptvrpm8">Compile it yourself:</h2>
+<h2 id="20250705113624-33o9xcv">Prerequisites</h2>
+<p id="20250705113624-4bbv5kh">Before you begin, you&#39;ll need to install:</p>
+<ol id="20250705113624-n8mxc2s">
+<li id="20250705113623-3x4wsl8"><p id="20250705113624-wl5jvgk"><strong>Rust</strong> - The programming language SyMark is built with</p>
+</li>
+<li id="20250705113623-euio4tp"><p id="20250705113624-pn14gmu"><strong>SiYuan</strong> - The note-taking application that creates the notes SyMark converts</p>
+</li>
+<li id="20250705113623-0wjksrx"><p id="20250705113624-j6r6ehp"><strong>Git</strong> (optional) - For downloading the SyMark repository if you don&#39;t use the ZIP download</p>
+</li>
+</ol>
+<h2 id="20250705113624-5mvhrzx">Step 1: Install Rust</h2>
+<p id="20250705113624-a0edopq">Rust is a programming language that SyMark is built with. Installing it is straightforward:</p>
+<h3 id="20250705113624-err3do9">Windows</h3>
+<ol id="20250705113624-ct6ji92">
+<li id="20250705113623-yt7cph7"><p id="20250705113624-nzsjbuz">Visit <a href="https://www.rust-lang.org/tools/install" target="_blank" class="link">https://www.rust-lang.org/tools/install</a></p>
+</li>
+<li id="20250705113623-6rdjehp"><p id="20250705113624-0ychuax">Download and run the <code>rustup-init.exe</code> file</p>
+</li>
+<li id="20250705113623-18o9d2v"><p id="20250705113624-j7azk6o">Follow the on-screen instructions (the default options are fine for most users)</p>
+</li>
+<li id="20250705113623-3bih8wn"><p id="20250705113624-h4r6g3y">Restart your computer to ensure the environment variables are set correctly</p>
+</li>
+</ol>
+<h3 id="20250705113624-w0yub6e">macOS / Linux</h3>
+<ol id="20250705113624-tm4yyd3">
+<li id="20250705113623-xeptp3a"><p id="20250705113624-x90i7s7">Open your terminal</p>
+</li>
+<li id="20250705113623-nz5j02c"><p id="20250705113624-c93mgwo">Run the following command:</p>
+<pre id="20250705113624-m7as5bo"><code>curl --proto &#39;=https&#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh
+</code></pre>
+</li>
+<li id="20250705113623-41r3jvs"><p id="20250705113624-xdxi4ce">Follow the on-screen instructions (the default options are fine for most users)</p>
+</li>
+<li id="20250705113623-21qqv2t"><p id="20250705113624-j7w614o">To apply the changes without restarting your terminal, run:</p>
+<pre id="20250705113624-ykq73oz"><code>
+<!-- Generated with SyMark, a static site generator for SiYuan Note. Available at https://github.com/du82/symark -->
+source $HOME/.cargo/env
+</code></pre>
+</li>
+</ol>
+<h3 id="20250705113624-k9u0slv">Verify Installation</h3>
+<p id="20250705113624-aj66kak">To verify that Rust is installed correctly, open a terminal or command prompt and run:</p>
+<pre id="20250705113624-4vcja7l"><code>rustc --version
+cargo --version
+</code></pre>
+<p id="20250705113624-b52re8r">Both commands should display version information if Rust is installed correctly.</p>
+<h2 id="20250705113624-zxto5gs">Step 2: Install SiYuan</h2>
+<p id="20250705113624-5n9tmdv">SiYuan is the note-taking application that creates the notes SyMark converts.</p>
+<ol id="20250705113624-ikz44dq">
+<li id="20250705113623-6v6uwfa"><p id="20250705113624-4x6retb">Visit <a href="https://github.com/siyuan-note/siyuan/releases" target="_blank" class="link">https://github.com/siyuan-note/siyuan/releases</a></p>
+</li>
+<li id="20250705113623-rjopbz0"><p id="20250705113624-djbq4oi">Download the appropriate version for your operating system</p>
+</li>
+<li id="20250705113623-kxjhdai"><p id="20250705113624-gzrzz9i">Install and run SiYuan</p>
+</li>
+<li id="20250705113623-rbh0lcx"><p id="20250705113624-z7kvwy6">Create some notes to test with (or use a sample notebook)</p>
+</li>
+</ol>
+<h2 id="20250705113624-sgjeujt">Step 3: Get SyMark</h2>
+<p id="20250705113624-40i9gl6">You can obtain SyMark by either cloning the repository using Git or downloading a ZIP file.</p>
+<h3 id="20250705113624-kbxkubw">Option A: Using Git</h3>
+<p id="20250705113624-xt6n1p8">If you have Git installed:</p>
+<pre id="20250705113624-uxeyla5"><code>git clone https://github.com/du82/symark.git
+cd symark
+</code></pre>
+<p id="20250705113624-cqbe5oo">(Replace <code>username</code> with the actual GitHub username of the SyMark repository owner)</p>
+<h3 id="20250705113624-jolpnb4">Option B: Download ZIP</h3>
+<ol id="20250705113624-b0usx84">
+<li id="20250705113623-xybfhi3"><p id="20250705113624-k6r9786">Visit the SyMark repository page</p>
+</li>
+<li id="20250705113623-go5oydw"><p id="20250705113624-1siat3k">Click the &quot;Code&quot; button and select &quot;Download ZIP&quot;</p>
+</li>
+<li id="20250705113623-ppkzs1d"><p id="20250705113624-598s8ih">Extract the ZIP file to a location of your choice</p>
+</li>
+<li id="20250705113623-9grfxvf"><p id="20250705113624-j6kiksb">Open a terminal or command prompt and navigate to the extracted folder</p>
+</li>
+</ol>
+<h2 id="20250705113624-xtcligt">Step 4: Prepare Your SiYuan Notes</h2>
+<p id="20250705113624-xxjpkbt">SyMark processes <code>.sy</code> files exported from SiYuan. To export your notes:</p>
+<ol id="20250705113624-07aauf0">
+<li id="20250705113623-1nquq90"><p id="20250705113624-lyqrex6">Open SiYuan</p>
+</li>
+<li id="20250705113623-83his61"><p id="20250705113624-vnu74eq">Navigate to the notebook you want to convert</p>
+</li>
+<li id="20250705113623-xw7re64"><p id="20250705113624-rni8o4x">Use the export functionality to create a ZIP file of your notebook</p>
+<ul id="20250705113624-9auszhg">
+<li id="20250705113623-guh2dkw"><p id="20250705113624-vc25clz">Menu → Export → Export Data → Select Your Notebook → Export</p>
+</li>
+</ul>
+</li>
+<li id="20250705113623-z7z1mks"><p id="20250705113624-fkrfjga">Extract the ZIP file containing your <code>.sy</code> files</p>
+</li>
+<li id="20250705113623-ga9f0x2"><p id="20250705113624-ysrt6s8">Copy all extracted files into the <code>input</code> directory of SyMark</p>
+<ul id="20250705113624-qufr9dj">
+<li id="20250705113623-3ynk1sf"><p id="20250705113624-awmhxca">Make sure to include all assets (like images) in the <code>input/assets</code> folder</p>
+</li>
+</ul>
+</li>
+</ol>
+<h2 id="20250705113624-tn1y5mc">Step 5: Run SyMark</h2>
+<p id="20250705113624-0dbc9xd">Now you&#39;re ready to convert your notes into a website:</p>
+<ol id="20250705113624-68dfjwu">
+<li id="20250705113623-qw9uml0"><p id="20250705113624-rezm9hc">Open a terminal or command prompt</p>
+</li>
+<li id="20250705113623-4f20qe0"><p id="20250705113624-29gzizk">Navigate to the SyMark directory</p>
+</li>
+<li id="20250705113623-bqxqy65"><p id="20250705113624-k8zucqa">Run SyMark using Cargo:</p>
+</li>
+</ol>
+<pre id="20250705113624-6rdyv3a"><code># Use the default theme
+cargo run
+
+# Or use a specific theme
+cargo run theme-name
+</code></pre>
+<p id="20250705113624-wa5ha96">Available themes include:</p>
+<ul id="20250705113624-hvlhwxj">
+<li id="20250705113623-vwf9chr"><p id="20250705113624-4umqg8k">default</p>
+</li>
+<li id="20250705113623-lkiyui6"><p id="20250705113624-b9ezmdc">dark</p>
+</li>
+<li id="20250705113623-xx1xbyn"><p id="20250705113624-8c9eqkj">flat</p>
+</li>
+<li id="20250705113623-e1ly0l4"><p id="20250705113624-es78cb8">garden</p>
+</li>
+<li id="20250705113623-3azcu3p"><p id="20250705113624-cyuimvd">paper</p>
+</li>
+</ul>
+<p id="20250705113624-sb91p50">The program will display information about the generation process, including the number of notes processed, tags found, and build time statistics.</p>
+<h2 id="20250705113624-cm6o145">Step 6: View Your Generated Website</h2>
+<p id="20250705113624-x82tsfk">After SyMark finishes processing, your website will be available in the <code>output</code> directory:</p>
+<ol id="20250705113624-xxqglqf">
+<li id="20250705113623-5mn1kt6"><p id="20250705113624-3rzewi3">Navigate to the <code>output</code> directory</p>
+</li>
+<li id="20250705113623-rademeh"><p id="20250705113624-ykpqg88">Open <code>index.html</code> in your web browser</p>
+</li>
+<li id="20250705113623-j5f0xpi"><p id="20250705113624-22fhwdh">Explore your newly generated website!</p>
+</li>
+</ol>
+<p id="20250705113624-kvpt88n">The generated website includes:</p>
+<ul id="20250705113624-p8aq4pb">
+<li id="20250705113623-9enepjw"><p id="20250705113624-zpqafpq">A home page (<code>index.html</code>)</p>
+</li>
+<li id="20250705113623-fmrxcob"><p id="20250705113624-3n9xz2g">A complete list of all notes (<code>all.html</code>)</p>
+</li>
+<li id="20250705113623-af1pkz9"><p id="20250705113624-p4co5j8">Individual pages for each note</p>
+</li>
+<li id="20250705113623-4xwt83e"><p id="20250705113624-4q100zp">Pages for each tag collection</p>
+</li>
+<li id="20250705113623-uthurjb"><p id="20250705113624-5kyevdo">An interactive visualization of note connections (<code>graph.html</code>)</p>
+</li>
+</ul>
+<h2 id="20250705113624-eb8g60i">Customization</h2>
+<p id="20250705113624-utkxc99">SyMark supports customization through themes. Each theme consists of:</p>
+<ul id="20250705113624-fyeu0r8">
+<li id="20250705113623-mz3n3oz"><p id="20250705113624-w86xc85"><code>page.html</code>: Template for all generated pages</p>
+</li>
+<li id="20250705113623-m7s9fs0"><p id="20250705113624-4ql0m6o"><code>styles.css</code>: CSS styles for the website</p>
+</li>
+<li id="20250705113623-njjj3xl"><p id="20250705113624-lkwe9da"><code>graph.html</code>: Template for the graph visualization page</p>
+</li>
+</ul>
+<p id="20250705113624-278yxbc">To create a custom theme:</p>
+<ol id="20250705113624-xhv3zb2">
+<li id="20250705113623-p0bpupu"><p id="20250705113624-0z9jasy">Create a new directory in the <code>themes</code> folder (e.g., <code>themes/my-custom-theme</code>)</p>
+</li>
+<li id="20250705113623-pjvzxkq"><p id="20250705113624-bxunqyh">Copy the files from an existing theme as a starting point</p>
+</li>
+<li id="20250705113623-a9r823l"><p id="20250705113624-8qqvxvu">Modify the HTML and CSS files to suit your preferences</p>
+</li>
+<li id="20250705113623-bks076o"><p id="20250705113624-pc9yez2">Run SyMark with your custom theme: <code>cargo run my-custom-theme</code></p>
+</li>
+</ol>
+<h3 id="20250705113624-jmtcyn2">Custom Index Page</h3>
+<p id="20250705113624-9vyv6ms">By default, SyMark generates an index page listing all notes. To create a custom index page:</p>
+<ol id="20250705113624-83aynon">
+<li id="20250705113623-oz2i85b"><p id="20250705113624-0lmsn1r">In SiYuan, create a note that will serve as your index page</p>
+</li>
+<li id="20250705113623-9wx8xg5"><p id="20250705113624-othrgq3">Add the tag <code>index</code> to this note</p>
+</li>
+<li id="20250705113623-0ibj5ci"><p id="20250705113624-0whho6a">Export your notebook and run SyMark</p>
+</li>
+<li id="20250705113623-h0ptdtx"><p id="20250705113624-nj3g7s5">SyMark will use your tagged note as the content for the main <code>index.html</code> page</p>
+</li>
+</ol>
+<h2 id="20250705113624-qoskbpx">Troubleshooting</h2>
+<p id="20250705113624-kcxsvwo">If you encounter issues:</p>
+<ol id="20250705113624-fh81q3q">
+<li id="20250705113623-g42yzg2"><p id="20250705113624-u8golot"><strong>Missing notes or assets</strong>: Ensure all your <code>.sy</code> files and assets are in the correct directories</p>
+</li>
+<li id="20250705113623-goeggkg"><p id="20250705113624-bq0ni28"><strong>Build errors</strong>: Check that you have the latest stable version of Rust installed</p>
+</li>
+<li id="20250705113623-vlmidel"><p id="20250705113624-wpttnw2"><strong>Broken links</strong>: Verify that all referenced note IDs exist in your input directory</p>
+</li>
+<li id="20250705113623-4onwm51"><p id="20250705113624-48020g2"><strong>Formatting issues</strong>: Some advanced SiYuan formatting features might not be fully supported</p>
+</li>
+</ol>
+<h2 id="20250705113624-vb62clg">Common Issues</h2>
+<ul id="20250705113624-p6mrpkn">
+<li id="20250705113623-8tzs3l4"><p id="20250705113624-hr22k29"><strong>Empty output directory</strong>: Check that your input directory contains valid <code>.sy</code> files</p>
+</li>
+<li id="20250705113623-24ew514"><p id="20250705113624-ibryx7e"><strong>Missing images</strong>: Ensure image assets are in the <code>input/assets/</code> directory</p>
+</li>
+<li id="20250705113623-7wkmycl"><p id="20250705113624-oekac2v"><strong>Error parsing file</strong>: The <code>.sy</code> file might be corrupted or in an unsupported format</p>
+</li>
+<li id="20250705113623-yna1eye"><p id="20250705113624-f0k0xhq"><strong>Missing dependencies</strong>: Run <code>cargo build</code> to ensure all dependencies are installed</p>
+</li>
+</ul>
+<h2 id="20250705113624-mck8gvt">Additional Resources</h2>
+<ul id="20250705113624-6ef5cf9">
+<li id="20250705113623-7s8iqr1"><p id="20250705113624-patzbnd"><strong>SiYuan Documentation</strong>: <a href="https://github.com/siyuan-note/siyuan" target="_blank" class="link">https://github.com/siyuan-note/siyuan</a></p>
+</li>
+<li id="20250705113623-b18c9v1"><p id="20250705113624-srtmjd6"><strong>Rust Documentation</strong>: <a href="https://www.rust-lang.org/learn" target="_blank" class="link">https://www.rust-lang.org/learn</a></p>
+</li>
+<li id="20250705113623-ruv5lxz"><p id="20250705113624-ejiz1tp"><strong>Markdown Guide</strong>: <a href="https://www.markdownguide.org/" target="_blank" class="link">https://www.markdownguide.org/</a></p>
+</li>
+</ul>
+
+            </div>
+        </main>
+    </div>
+    </div>
+</body>
+</html>
