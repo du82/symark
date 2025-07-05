@@ -940,19 +940,28 @@ a {
     list-style: none;
 }
 
-.task-checkbox-unchecked,
-.task-checkbox-checked {
-    min-width: 20px;
-    height: 20px;
-    margin-right: 10px;
-    border: 1px solid #bdc3c7;
-    border-radius: 2px;
-    background-color: var(--bg-color);
-    border-color: var(--border-color);
-    list-style: none;
+.task-checkbox-unchecked {
+    position: absolute;
+    left: 0;
+    top: 2px;
     display: inline-block;
-    position: relative;
-    vertical-align: middle;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    background-color: var(--bg-color);
+    border-radius: 2px;
+}
+
+.task-checkbox-checked {
+    position: absolute;
+    left: 0;
+    top: 2px;
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    background-color: var(--link-color);
+    border-color: var(--border-color);
+    border-radius: 2px;
 }
 
 /* Ensure no list-style behavior */

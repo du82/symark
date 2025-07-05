@@ -2082,7 +2082,7 @@ fn render_blocks(
                     if let Some(task_marker_block) = block.Children.iter().find(|child| child.Type == "NodeTaskListItemMarker") {
                         if task_marker_block.TaskListItemChecked {
                             // Checked item
-                            html.push_str("<span class=\"task-checkbox-checked\" style=\"position: absolute; left: 0; top: 2px; display: inline-block; width: 20px; height: 20px; border: 2px solid #bdc3c7; background-color: #3498db; border-color: #3498db; border-radius: 2px;\"></span>");
+                            html.push_str("<span class=\"task-checkbox-checked\"></span>");
                             html.push_str("<span class=\"task-complete\" style=\"text-decoration: line-through; color: #7f8c8d;\">");
 
                             // Filter out the marker from rendering
@@ -2093,7 +2093,7 @@ fn render_blocks(
                             }
                             html.push_str("</span>");
                         } else {
-                            html.push_str("<span class=\"task-checkbox-unchecked\" style=\"position: absolute; left: 0; top: 2px; display: inline-block; width: 20px; height: 20px; border: 2px solid #bdc3c7; background-color: #ecf0f1; border-radius: 2px;\"></span>");
+                            html.push_str("<span class=\"task-checkbox-unchecked\"></span>");
 
                             for child in &block.Children {
                                 if child.Type != "NodeTaskListItemMarker" {
