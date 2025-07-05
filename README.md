@@ -14,6 +14,7 @@ SyMark processes `.sy` files from SiYuan notebooks and generates a static websit
 - Supports tags with dedicated tag pages
 - Automatically generates table of contents
 - Renders markdown formatting, code blocks, and other SiYuan features
+- Image caption support using figure/figcaption elements
 - Custom index page support
 - Zero-width whitespace character removal for clean HTML output
 - Lightning-fast generation even for large notebooks (1,000,000+ notes)
@@ -125,6 +126,7 @@ If you encounter issues:
 - **Missing images**: Ensure image assets are in the `input/assets/` directory
 - **Broken links**: Check that referenced note IDs exist in your input directory
 - **Formatting issues**: Verify your SiYuan notes use supported formatting features
+- **Image captions**: Add captions to images by using the title attribute in SiYuan's image dialog
 
 ## Performance
 

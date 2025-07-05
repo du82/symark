@@ -2243,6 +2243,7 @@ fn render_blocks(
                 // Handle image nodes
                 let mut image_src = String::new();
                 let mut alt_text = String::new();
+                let mut caption = String::new();
                 let mut style_attr = String::new();
                 let mut parent_style_attr = String::new();
                 let id_attr = if !block.ID.is_empty() {
@@ -2257,6 +2258,8 @@ fn render_blocks(
                         image_src = child.Data.clone();
                     } else if child.Type == "NodeLinkText" {
                         alt_text = child.Data.clone();
+                    } else if child.Type == "NodeLinkTitle" {
+                        caption = child.Data.clone();
                     }
                 }
 
@@ -2273,10 +2276,19 @@ fn render_blocks(
                 }
 
                 if !image_src.is_empty() {
+                    // Check if we have a caption, if so we'll use a figure/figcaption structure
+                    let has_caption = !caption.is_empty();
+                    
+                    // If we have a caption, open a figure element
+                    if has_caption {
+                        html.push_str(&format!("<figure{} class=\"image-with-caption\">", id_attr));
+                    }
+                    
                     // If parent styling is present, wrap the image in a div with that styling
                     if !parent_style_attr.is_empty() {
-                        let wrapper_id = if !block.ID.is_empty() {
-                            // If we have an ID, use it for the wrapper instead of the img
+                        let wrapper_id = if !block.ID.is_empty() && !has_caption {
+                            // If we have an ID and no caption, use it for the wrapper instead of the img
+                            // (if we have a caption, the ID is already on the figure element)
                             format!(" id=\"{}\"", block.ID)
                         } else {
                             String::new()
@@ -2290,20 +2302,31 @@ fn render_blocks(
                             alt_text,
                             style_attr
                         ));
+                        
+                        // Close the parent div
+                        html.push_str("</div>");
                     } else {
-                        // No wrapper, add ID directly to the img tag
+                        // No wrapper, add ID directly to the img tag if no caption
+                        // (if we have a caption, the ID is already on the figure element)
+                        let img_id_attr = if has_caption { "" } else { &id_attr };
                         html.push_str(&format!(
                             "<img{} src=\"{}\" alt=\"{}\"{}/>",
-                            id_attr,
+                            img_id_attr,
                             image_src,
                             alt_text,
                             style_attr
                         ));
                     }
-
-                    // Close the parent div if it was opened
-                    if !parent_style_attr.is_empty() {
-                        html.push_str("</div>");
+                    
+                    // Add figcaption if we have a caption
+                    if has_caption {
+                        html.push_str(&format!(
+                            "<figcaption>{}</figcaption>",
+                            escape_html(&caption)
+                        ));
+                        
+                        // Close the figure
+                        html.push_str("</figure>");
                     }
                 }
             },

@@ -280,19 +280,45 @@ img {
    border-radius: 6px;
 }
 
+/* Figure and caption styling */
+figure.image-with-caption {
+    margin: 1em 0;
+    display: inline-block;
+    max-width: fit-content;
+    clear: both;
+}
+
+figure.image-with-caption img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+figcaption {
+    margin-top: 0.5em;
+    font-size: 0.9em;
+    color: var(--color-text-light);
+    font-style: italic;
+    text-align: center;
+    width: 100%;
+    display: block;
+}
+
 /* Image alignment classes */
 .article-content p img {
     margin-bottom: 16px;
 }
 
 /* Center-aligned images through parent div or paragraph */
-.article-content p[style*="text-align: center"] img {
+.article-content p[style*="text-align: center"] img,
+.article-content p[style*="text-align: center"] figure.image-with-caption {
     margin-left: auto;
     margin-right: auto;
 }
 
 /* Right-aligned images through parent div or paragraph */
-.article-content p[style*="text-align: right"] img {
+.article-content p[style*="text-align: right"] img,
+.article-content p[style*="text-align: right"] figure.image-with-caption {
     margin-left: auto;
     margin-right: 0;
 }
@@ -300,6 +326,16 @@ img {
 /* Image container with parent styles */
 .article-content p div {
     margin-bottom: 16px;
+}
+
+/* Add space between images and other content */
+.article-content figure {
+    margin-bottom: 1.5em;
+}
+
+/* Additional spacing for figures in article content */
+.article-content figure.image-with-caption {
+    margin-bottom: 1.5em;
 }
 
 /* Header styles */
