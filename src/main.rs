@@ -2707,11 +2707,11 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         // Create tooltip HTML
                         html.push_str(&format!("<span{} class=\"tooltip\">", id_attr));
                         html.push_str(&format!(
-                            "<a href=\"{}.html\"><sub>{}",
+                            "<a href=\"{}.html\"><sup>{}",
                             block.TextMarkBlockRefID,
                             escape_html(&title)
                         ));
-                        html.push_str("</sub></a>");
+                        html.push_str("</sup></a>");
                         
                         // Add tooltip content
                         html.push_str("<span class=\"right bottom\">");
@@ -2759,87 +2759,87 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         html.push_str("<i></i></span></span>");
                     } else {
                         html.push_str(&format!(
-                            "<span{} title=\"Missing reference: {}\"><sub>{}",
+                            "<span{} title=\"Missing reference: {}\"><sup>{}",
                             id_attr,
                             block.TextMarkBlockRefID,
                             escape_html(&block.TextMarkTextContent)
                         ));
-                        html.push_str("</sub></span>");
+                        html.push_str("</sup></span>");
                     }
                 },
                 "a" => {
                     html.push_str(&format!(
-                        "<a{} href=\"{}\" target=\"_blank\" class=\"link\"><sub>{}",
+                        "<a{} href=\"{}\" target=\"_blank\" class=\"link\"><sup>{}",
                         id_attr,
                         block.TextMarkAHref,
                         escape_html(&block.TextMarkTextContent)
                     ));
-                    html.push_str("</sub></a>");
+                    html.push_str("</sup></a>");
                 },
                 "strong" | "strong text" => {
                     html.push_str(&format!(
-                        "<strong{}><sub>{}",
+                        "<strong{}><sup>{}",
                         id_attr,
                         escape_html(&block.TextMarkTextContent)
                     ));
-                    html.push_str("</sub></strong>");
+                    html.push_str("</sup></strong>");
                 },
                 "em" => {
                     html.push_str(&format!(
-                        "<em{}><sub>{}",
+                        "<em{}><sup>{}",
                         id_attr,
                         escape_html(&block.TextMarkTextContent)
                     ));
-                    html.push_str("</sub></em>");
+                    html.push_str("</sup></em>");
                 },
                 "u" => {
                     html.push_str(&format!(
-                        "<u{}><sub>{}",
+                        "<u{}><sup>{}",
                         id_attr,
                         escape_html(&block.TextMarkTextContent)
                     ));
-                    html.push_str("</sub></u>");
+                    html.push_str("</sup></u>");
                 },
                 "s" => {
                     html.push_str(&format!(
-                        "<s{}><sub>{}",
+                        "<s{}><sup>{}",
                         id_attr,
                         escape_html(&block.TextMarkTextContent)
                     ));
-                    html.push_str("</sub></s>");
+                    html.push_str("</sup></s>");
                 },
                 "mark" => {
                     html.push_str(&format!(
-                        "<mark{}><sub>{}",
+                        "<mark{}><sup>{}",
                         id_attr,
                         escape_html(&block.TextMarkTextContent)
                     ));
-                    html.push_str("</sub></mark>");
+                    html.push_str("</sup></mark>");
                 },
                 "tag" => {
                     html.push_str(&format!(
-                        "<a{} href=\"tag_{}.html\" class=\"tag\"><sub># {}",
+                        "<a{} href=\"tag_{}.html\" class=\"tag\"><sup># {}",
                         id_attr,
                         block.TextMarkTextContent.replace(" ", "_"),
                         block.TextMarkTextContent
                     ));
-                    html.push_str("</sub></a>");
+                    html.push_str("</sup></a>");
                 },
                 "" => {
                     html.push_str(&format!(
-                        "<sub{}>{}",
+                        "<sup{}>{}",
                         id_attr,
                         escape_html(&block.TextMarkTextContent)
                     ));
-                    html.push_str("</sub>");
+                    html.push_str("</sup>");
                 },
                 _ => {
                     html.push_str(&format!(
-                        "<sub{}>{}",
+                        "<sup{}>{}",
                         id_attr,
                         escape_html(&block.TextMarkTextContent)
                     ));
-                    html.push_str("</sub>");
+                    html.push_str("</sup>");
                 }
             }
         },
