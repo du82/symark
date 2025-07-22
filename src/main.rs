@@ -2545,21 +2545,461 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
             ));
             html.push_str("</s>");
         },
-        "sub" => {
-            html.push_str(&format!(
-                "<sub{}>{}",
-                id_attr,
-                escape_html(&block.TextMarkTextContent)
-            ));
-            html.push_str("</sub>");
+        text_type if text_type == "sub" || text_type.starts_with("sub ") => {
+            let additional_format = if text_type.starts_with("sub ") {
+                &text_type[4..]
+            } else {
+                ""
+            };
+
+            if additional_format == "block-ref" {
+                if notes_map.contains_key(&block.TextMarkBlockRefID) {
+                    let ref_note = &notes_map[&block.TextMarkBlockRefID];
+                    let title = if !block.TextMarkTextContent.is_empty() {
+                        block.TextMarkTextContent.clone()
+                    } else if !ref_note.Properties.title.is_empty() {
+                        ref_note.Properties.title.clone()
+                    } else {
+                        block.TextMarkBlockRefID.clone()
+                    };
+
+                    // Create tooltip HTML
+                    html.push_str(&format!("<span{} class=\"tooltip\">", id_attr));
+                    html.push_str(&format!(
+                        "<a href=\"{}.html\"><sub>{}",
+                        block.TextMarkBlockRefID,
+                        escape_html(&title)
+                    ));
+                    html.push_str("</sub></a>");
+                    
+                    // Add tooltip content
+                    html.push_str("<span class=\"right bottom\">");
+                    html.push_str(&format!("<span class=\"tooltip-title\">{}</span>", escape_html(&ref_note.Properties.title)));
+                    
+                    // Extract excerpt for tooltip
+                    let mut excerpt = String::new();
+                    let mut paragraph_count = 0;
+                    for child in &ref_note.Children {
+                        if child.Type == "NodeParagraph" {
+                            if paragraph_count > 0 {
+                                excerpt.push_str("<br>");
+                            }
+
+                            for grandchild in &child.Children {
+                                if grandchild.Type == "NodeText" {
+                                    excerpt.push_str(&escape_html(&grandchild.Data));
+                                    excerpt.push(' ');
+                                }
+                            }
+
+                            paragraph_count += 1;
+                            if paragraph_count >= 2 {
+                                break;
+                            }
+                        }
+                    }
+
+                    // Limit excerpt length
+                    if excerpt.len() > 300 {
+                        let mut end_index = 0;
+                        let mut char_count = 0;
+                        for (idx, _) in excerpt.char_indices() {
+                            end_index = idx;
+                            char_count += 1;
+                            if char_count >= 300 {
+                                break;
+                            }
+                        }
+                        excerpt = excerpt[0..end_index].to_string();
+                        excerpt.push_str("...");
+                    }
+
+                    html.push_str(&format!("<span class=\"tooltip-excerpt\">{}</span>", excerpt));
+                    html.push_str("<i></i></span></span>");
+                } else {
+                    html.push_str(&format!(
+                        "<span{} title=\"Missing reference: {}\"><sub>{}",
+                        id_attr,
+                        block.TextMarkBlockRefID,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sub></span>");
+                }
+            } else if additional_format == "a" {
+                html.push_str(&format!(
+                    "<a{} href=\"{}\" target=\"_blank\" class=\"link\"><sub>{}",
+                    id_attr,
+                    block.TextMarkAHref,
+                    escape_html(&block.TextMarkTextContent)
+                ));
+                html.push_str("</sub></a>");
+            } else if additional_format == "strong" || additional_format == "strong text" {
+                html.push_str(&format!(
+                    "<strong{}><sub>{}",
+                    id_attr,
+                    escape_html(&block.TextMarkTextContent)
+                ));
+                html.push_str("</sub></strong>");
+            } else if additional_format == "em" {
+                html.push_str(&format!(
+                    "<em{}><sub>{}",
+                    id_attr,
+                    escape_html(&block.TextMarkTextContent)
+                ));
+                html.push_str("</sub></em>");
+            } else if additional_format == "u" {
+                html.push_str(&format!(
+                    "<u{}><sub>{}",
+                    id_attr,
+                    escape_html(&block.TextMarkTextContent)
+                ));
+                html.push_str("</sub></u>");
+            } else if additional_format == "s" {
+                html.push_str(&format!(
+                    "<s{}><sub>{}",
+                    id_attr,
+                    escape_html(&block.TextMarkTextContent)
+                ));
+                html.push_str("</sub></s>");
+            } else if additional_format == "mark" {
+                html.push_str(&format!(
+                    "<mark{}><sub>{}",
+                    id_attr,
+                    escape_html(&block.TextMarkTextContent)
+                ));
+                html.push_str("</sub></mark>");
+            } else if additional_format == "tag" {
+                html.push_str(&format!(
+                    "<a{} href=\"tag_{}.html\" class=\"tag\"><sub># {}",
+                    id_attr,
+                    block.TextMarkTextContent.replace(" ", "_"),
+                    block.TextMarkTextContent
+                ));
+                html.push_str("</sub></a>");
+            } else {
+                html.push_str(&format!(
+                    "<sub{}>{}",
+                    id_attr,
+                    escape_html(&block.TextMarkTextContent)
+                ));
+                html.push_str("</sub>");
+            }
         },
-        "sup" => {
-            html.push_str(&format!(
-                "<sup{}>{}",
-                id_attr,
-                escape_html(&block.TextMarkTextContent)
-            ));
-            html.push_str("</sup>");
+        text_type if text_type == "sup" || text_type.starts_with("sup ") => {
+            let additional_format = if text_type.starts_with("sup ") {
+                &text_type[4..]
+            } else {
+                ""
+            };
+
+            match additional_format {
+                "block-ref" => {
+                    if notes_map.contains_key(&block.TextMarkBlockRefID) {
+                        let ref_note = &notes_map[&block.TextMarkBlockRefID];
+                        let title = if !block.TextMarkTextContent.is_empty() {
+                            block.TextMarkTextContent.clone()
+                        } else if !ref_note.Properties.title.is_empty() {
+                            ref_note.Properties.title.clone()
+                        } else {
+                            block.TextMarkBlockRefID.clone()
+                        };
+
+                        // Create tooltip HTML
+                        html.push_str(&format!("<span{} class=\"tooltip\">", id_attr));
+                        html.push_str(&format!(
+                            "<a href=\"{}.html\"><sub>{}",
+                            block.TextMarkBlockRefID,
+                            escape_html(&title)
+                        ));
+                        html.push_str("</sub></a>");
+                        
+                        // Add tooltip content
+                        html.push_str("<span class=\"right bottom\">");
+                        html.push_str(&format!("<span class=\"tooltip-title\">{}</span>", escape_html(&ref_note.Properties.title)));
+                        
+                        // Extract excerpt for tooltip
+                        let mut excerpt = String::new();
+                        let mut paragraph_count = 0;
+                        for child in &ref_note.Children {
+                            if child.Type == "NodeParagraph" {
+                                if paragraph_count > 0 {
+                                    excerpt.push_str("<br>");
+                                }
+
+                                for grandchild in &child.Children {
+                                    if grandchild.Type == "NodeText" {
+                                        excerpt.push_str(&escape_html(&grandchild.Data));
+                                        excerpt.push(' ');
+                                    }
+                                }
+
+                                paragraph_count += 1;
+                                if paragraph_count >= 2 {
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Limit excerpt length
+                        if excerpt.len() > 300 {
+                            let mut end_index = 0;
+                            let mut char_count = 0;
+                            for (idx, _) in excerpt.char_indices() {
+                                end_index = idx;
+                                char_count += 1;
+                                if char_count >= 300 {
+                                    break;
+                                }
+                            }
+                            excerpt = excerpt[0..end_index].to_string();
+                            excerpt.push_str("...");
+                        }
+
+                        html.push_str(&format!("<span class=\"tooltip-excerpt\">{}</span>", excerpt));
+                        html.push_str("<i></i></span></span>");
+                    } else {
+                        html.push_str(&format!(
+                            "<span{} title=\"Missing reference: {}\"><sub>{}",
+                            id_attr,
+                            block.TextMarkBlockRefID,
+                            escape_html(&block.TextMarkTextContent)
+                        ));
+                        html.push_str("</sub></span>");
+                    }
+                },
+                "a" => {
+                    html.push_str(&format!(
+                        "<a{} href=\"{}\" target=\"_blank\" class=\"link\"><sub>{}",
+                        id_attr,
+                        block.TextMarkAHref,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sub></a>");
+                },
+                "strong" | "strong text" => {
+                    html.push_str(&format!(
+                        "<strong{}><sub>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sub></strong>");
+                },
+                "em" => {
+                    html.push_str(&format!(
+                        "<em{}><sub>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sub></em>");
+                },
+                "u" => {
+                    html.push_str(&format!(
+                        "<u{}><sub>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sub></u>");
+                },
+                "s" => {
+                    html.push_str(&format!(
+                        "<s{}><sub>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sub></s>");
+                },
+                "mark" => {
+                    html.push_str(&format!(
+                        "<mark{}><sub>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sub></mark>");
+                },
+                "tag" => {
+                    html.push_str(&format!(
+                        "<a{} href=\"tag_{}.html\" class=\"tag\"><sub># {}",
+                        id_attr,
+                        block.TextMarkTextContent.replace(" ", "_"),
+                        block.TextMarkTextContent
+                    ));
+                    html.push_str("</sub></a>");
+                },
+                "" => {
+                    html.push_str(&format!(
+                        "<sub{}>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sub>");
+                },
+                _ => {
+                    html.push_str(&format!(
+                        "<sub{}>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sub>");
+                }
+            }
+        },
+        text_type if text_type == "sup" || text_type.starts_with("sup ") => {
+            let additional_format = if text_type.starts_with("sup ") {
+                &text_type[4..]
+            } else {
+                ""
+            };
+
+            match additional_format {
+                "block-ref" => {
+                    if notes_map.contains_key(&block.TextMarkBlockRefID) {
+                        let ref_note = &notes_map[&block.TextMarkBlockRefID];
+                        let title = if !block.TextMarkTextContent.is_empty() {
+                            block.TextMarkTextContent.clone()
+                        } else if !ref_note.Properties.title.is_empty() {
+                            ref_note.Properties.title.clone()
+                        } else {
+                            block.TextMarkBlockRefID.clone()
+                        };
+
+                        // Create tooltip HTML
+                        html.push_str(&format!("<span{} class=\"tooltip\">", id_attr));
+                        html.push_str(&format!(
+                            "<a href=\"{}.html\"><sup>{}",
+                            block.TextMarkBlockRefID,
+                            escape_html(&title)
+                        ));
+                        html.push_str("</sup></a>");
+                        
+                        // Add tooltip content
+                        html.push_str("<span class=\"right bottom\">");
+                        html.push_str(&format!("<span class=\"tooltip-title\">{}</span>", escape_html(&ref_note.Properties.title)));
+                        
+                        // Extract excerpt for tooltip
+                        let mut excerpt = String::new();
+                        let mut paragraph_count = 0;
+                        for child in &ref_note.Children {
+                            if child.Type == "NodeParagraph" {
+                                if paragraph_count > 0 {
+                                    excerpt.push_str("<br>");
+                                }
+
+                                for grandchild in &child.Children {
+                                    if grandchild.Type == "NodeText" {
+                                        excerpt.push_str(&escape_html(&grandchild.Data));
+                                        excerpt.push(' ');
+                                    }
+                                }
+
+                                paragraph_count += 1;
+                                if paragraph_count >= 2 {
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Limit excerpt length
+                        if excerpt.len() > 300 {
+                            let mut end_index = 0;
+                            let mut char_count = 0;
+                            for (idx, _) in excerpt.char_indices() {
+                                end_index = idx;
+                                char_count += 1;
+                                if char_count >= 300 {
+                                    break;
+                                }
+                            }
+                            excerpt = excerpt[0..end_index].to_string();
+                            excerpt.push_str("...");
+                        }
+
+                        html.push_str(&format!("<span class=\"tooltip-excerpt\">{}</span>", excerpt));
+                        html.push_str("<i></i></span></span>");
+                    } else {
+                        html.push_str(&format!(
+                            "<span{} title=\"Missing reference: {}\"><sup>{}",
+                            id_attr,
+                            block.TextMarkBlockRefID,
+                            escape_html(&block.TextMarkTextContent)
+                        ));
+                        html.push_str("</sup></span>");
+                    }
+                },
+                "a" => {
+                    html.push_str(&format!(
+                        "<a{} href=\"{}\" target=\"_blank\" class=\"link\"><sup>{}",
+                        id_attr,
+                        block.TextMarkAHref,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sup></a>");
+                },
+                "strong" | "strong text" => {
+                    html.push_str(&format!(
+                        "<strong{}><sup>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sup></strong>");
+                },
+                "em" => {
+                    html.push_str(&format!(
+                        "<em{}><sup>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sup></em>");
+                },
+                "u" => {
+                    html.push_str(&format!(
+                        "<u{}><sup>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sup></u>");
+                },
+                "s" => {
+                    html.push_str(&format!(
+                        "<s{}><sup>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sup></s>");
+                },
+                "mark" => {
+                    html.push_str(&format!(
+                        "<mark{}><sup>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sup></mark>");
+                },
+                "tag" => {
+                    html.push_str(&format!(
+                        "<a{} href=\"tag_{}.html\" class=\"tag\"><sup># {}",
+                        id_attr,
+                        block.TextMarkTextContent.replace(" ", "_"),
+                        block.TextMarkTextContent
+                    ));
+                    html.push_str("</sup></a>");
+                },
+                "" => {
+                    html.push_str(&format!(
+                        "<sup{}>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sup>");
+                },
+                _ => {
+                    html.push_str(&format!(
+                        "<sup{}>{}",
+                        id_attr,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</sup>");
+                }
+            }
         },
         "kbd" => {
             html.push_str(&format!(
