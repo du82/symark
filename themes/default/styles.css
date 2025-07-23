@@ -1269,3 +1269,154 @@ a {
         border-right: none;
     }
 }
+
+/* Highlight animation for anchor navigation */
+@keyframes highlight-animation {
+    0% {
+        background-color: rgba(var(--primary-color-rgb), 0.3);
+    }
+    50% {
+        background-color: rgba(var(--primary-color-rgb), 0.15);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.highlight {
+    animation: highlight-animation 2.5s ease-out;
+    outline: 2px solid rgba(var(--primary-color-rgb), 0.4);
+    border-radius: 3px;
+    box-shadow: 0 0 8px rgba(var(--primary-color-rgb), 0.2);
+}
+
+/* Copy Link Button Styles */
+.heading-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 100%;
+}
+
+.copy-link-button {
+    visibility: hidden;
+    position: absolute;
+    left: -40px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--primary-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text-color);
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px var(--primary-box-shadow-color);
+    z-index: 10;
+    line-height: 0;
+    backdrop-filter: blur(2px);
+}
+
+.copy-link-button:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 2px 5px var(--primary-box-shadow-color);
+}
+
+h1:hover .copy-link-button,
+h2:hover .copy-link-button,
+h3:hover .copy-link-button,
+h4:hover .copy-link-button,
+h5:hover .copy-link-button,
+h6:hover .copy-link-button,
+p:hover .copy-link-button,
+blockquote:hover .copy-link-button,
+ul:hover .copy-link-button,
+ol:hover .copy-link-button,
+pre:hover .copy-link-button,
+div[id]:hover .copy-link-button,
+table:hover .copy-link-button,
+section[id]:hover .copy-link-button,
+article[id]:hover .copy-link-button,
+li[id]:hover .copy-link-button,
+figure[id]:hover .copy-link-button,
+.article-content *[id]:hover .copy-link-button {
+    visibility: visible;
+}
+
+.copy-link-button svg {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    display: block;
+    stroke-width: 2.2;
+}
+
+.copy-link-success {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--success-bg-color);
+    color: var(--success-text-color);
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    pointer-events: none;
+    line-height: 1.4;
+    transform: translateY(10px);
+}
+
+.copy-link-success.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Media queries for copy link button responsiveness */
+@media (max-width: 1200px) {
+    .copy-link-button {
+        left: -35px;
+    }
+}
+
+@media (max-width: 900px) {
+    .copy-link-button {
+        left: -30px;
+        padding: 3px 5px;
+    }
+    
+    .copy-link-button svg {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+@media (max-width: 640px) {
+    .copy-link-button {
+        left: -25px;
+        padding: 2px 3px;
+        transform: translateY(-50%) scale(0.9);
+    }
+    
+    .article-content {
+        padding-left: 5px; /* Add a little padding to prevent button overlap */
+    }
+    
+    h1:hover .copy-link-button,
+    h2:hover .copy-link-button,
+    h3:hover .copy-link-button {
+        left: -22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .copy-link-button {
+        left: -20px;
+        transform: translateY(-50%) scale(0.85);
+    }
+}

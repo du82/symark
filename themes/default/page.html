@@ -17,6 +17,190 @@
     <meta property="og:image" content="{{og_image}}">
     <meta property="article:published_time" content="{{og_published_time}}">
     <meta property="article:modified_time" content="{{og_modified_time}}">
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add copy link functionality to content elements
+            addCopyLinkButtons();
+            
+            // Create success notification element
+            const successNotification = document.createElement('div');
+            successNotification.className = 'copy-link-success';
+            successNotification.textContent = 'Link copied to clipboard!';
+            document.body.appendChild(successNotification);
+            
+            // Function to show success notification
+            window.showCopySuccess = function() {
+                successNotification.classList.add('show');
+                setTimeout(function() {
+                    successNotification.classList.remove('show');
+                }, 2000);
+            };
+            
+            // Handle anchor links on page load
+            if (window.location.hash) {
+                setTimeout(handleAnchorNavigation, 100);
+            }
+            
+            // Also handle clicks on anchor links within the page
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (link && link.hash && link.hostname === window.location.hostname) {
+                    setTimeout(handleAnchorNavigation, 100);
+                }
+            });
+            
+            function handleAnchorNavigation() {
+                if (!window.location.hash) return;
+                
+                const targetId = window.location.hash.substring(1);
+                const targetElement = document.getElementById(targetId);
+                
+                if (targetElement) {
+                    // Remove any existing highlights
+                    document.querySelectorAll('.highlight').forEach(function(el) {
+                        el.classList.remove('highlight');
+                    });
+                    
+                    // Scroll to element with a small offset for better visibility
+                    window.scrollTo({
+                        top: targetElement.getBoundingClientRect().top + window.scrollY - 80,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Add highlight effect
+                    targetElement.classList.add('highlight');
+                    setTimeout(function() {
+                        targetElement.classList.remove('highlight');
+                    }, 2500);
+                }
+            }
+            
+            function addCopyLinkButtons() {
+                // Find all elements with IDs in the article content
+                const contentArea = document.querySelector('.article-content');
+                if (!contentArea) return;
+                
+                // Select all elements with IDs inside the content area
+                const elementsWithId = contentArea.querySelectorAll('[id]');
+                const addedButtons = new Set(); // Track elements that already have buttons
+                
+                // Process main content headings first (they need special handling)
+                const headings = contentArea.querySelectorAll('h1, h2, h3, h4, h5, h6');
+                headings.forEach(function(heading) {
+                    if (!heading.id) {
+                        // If heading doesn't have an ID, generate one from the text content
+                        const headingText = heading.textContent.trim();
+                        const idText = headingText.toLowerCase().replace(/[^\w\s-]/g, '')
+                            .replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+                        heading.id = idText || `heading-${Math.random().toString(36).substr(2, 9)}`;
+                    }
+                    
+                    addCopyButtonToElement(heading);
+                    addedButtons.add(heading.id);
+                });
+                
+                // Process other elements with IDs
+                elementsWithId.forEach(function(element) {
+                    // Skip if we already processed this element
+                    if (addedButtons.has(element.id)) return;
+                    
+                    // Skip elements that shouldn't have copy buttons
+                    if (shouldSkipElement(element)) return;
+                    
+                    addCopyButtonToElement(element);
+                });
+            }
+            
+            function shouldSkipElement(element) {
+                // Skip elements that are part of UI controls or don't make sense for direct linking
+                return element.closest('.toc-sidebar') || 
+                   element.closest('.site-header') ||
+                   element.closest('.header-icons') ||
+                   element.closest('.copy-link-success') ||
+                   element.closest('.copy-link-button') ||
+                   element.tagName === 'BUTTON' ||
+                   element.tagName === 'INPUT' ||
+                   element.tagName === 'LABEL' ||
+                   element.tagName === 'SVG' ||
+                   element.tagName === 'PATH' ||
+                   element.id === 'toc-sidebar' ||
+                   element.id === 'toc-overlay' ||
+                   element.id === 'toc-toggle' ||
+                   element.classList.contains('copy-link-button');
+            }
+            
+            function addCopyButtonToElement(element) {
+                // Create link button
+                const linkButton = document.createElement('button');
+                linkButton.className = 'copy-link-button';
+                linkButton.setAttribute('aria-label', 'Copy link to this section');
+                linkButton.setAttribute('title', 'Copy link to this section');
+                linkButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>';
+                
+                // Add click event to copy the URL with hash
+                linkButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const url = window.location.origin + window.location.pathname + '#' + element.id;
+                    navigator.clipboard.writeText(url).then(function() {
+                        showCopySuccess();
+                        
+                        // Add a temporary class to the target element to show it's been copied
+                        element.classList.add('highlight');
+                        setTimeout(function() {
+                            element.classList.remove('highlight');
+                        }, 1000);
+                    }).catch(function(err) {
+                        console.error('Could not copy URL: ', err);
+                    });
+                });
+                
+                // Handle different element types
+                if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(element.tagName)) {
+                    // For headings, create a container to maintain styling
+                    if (!element.querySelector('.heading-container')) {
+                        const headingContent = element.innerHTML;
+                        element.innerHTML = '';
+                        
+                        const container = document.createElement('span');
+                        container.className = 'heading-container';
+                        container.innerHTML = headingContent;
+                        
+                        element.appendChild(container);
+                        container.appendChild(linkButton);
+                    }
+                } else if (element.tagName === 'P' || element.tagName === 'LI' || 
+                           element.tagName === 'BLOCKQUOTE' || element.tagName === 'PRE') {
+                    // For block elements, position relative and prepend
+                    if (!element.style.position) {
+                        element.style.position = 'relative';
+                    }
+                    if (!element.querySelector('.copy-link-button')) {
+                        element.prepend(linkButton);
+                    }
+                } else if (element.tagName === 'DIV' || element.tagName === 'SECTION' || 
+                          element.tagName === 'ARTICLE' || element.tagName === 'TABLE') {
+                    // For larger containers, position button at the top
+                    if (!element.style.position) {
+                        element.style.position = 'relative';
+                    }
+                    if (!element.querySelector('.copy-link-button')) {
+                        element.prepend(linkButton);
+                    }
+                } else {
+                    // For other elements, try to add the button in a way that makes sense
+                    if (!element.querySelector('.copy-link-button')) {
+                        if (!element.style.position) {
+                            element.style.position = 'relative';
+                        }
+                        element.prepend(linkButton);
+                    }
+                }
+            }
+        });
+    </script>
 </head>
 <body class="toc-enabled">
     <input type="checkbox" id="toc-toggle" class="toc-toggle-input">
