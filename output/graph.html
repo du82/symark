@@ -9,13 +9,11 @@
         .links line {
             stroke: #999;
             stroke-opacity: 0.6;
-            transition: stroke 0.3s, stroke-opacity 0.3s;
         }
 
         .nodes circle {
             stroke: #fff;
             stroke-width: 1.5px;
-            transition: all 0.3s ease;
             cursor: pointer;
         }
 
@@ -31,7 +29,6 @@
                         0px -1px 0 var(--background-color),
                         1px 0px 0 var(--background-color),
                         -1px 0px 0 var(--background-color);
-            transition: all 0.3s ease;
         }
 
         .graph-container {
@@ -60,7 +57,6 @@
             pointer-events: none;
             z-index: 200;
             opacity: 0;
-            transition: opacity 0.3s, transform 0.3s;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             transform: translateY(10px);
         }
@@ -102,7 +98,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
         // Graph data will be populated by the generator
-        const graphData = {"links":[{"source":"20250506164324-csw026m","target":"20250506183737-jh03nc2","value":1},{"source":"20250506164324-csw026m","target":"20250704120831-gxq5is1","value":1},{"source":"20250506164324-csw026m","target":"20250507101719-g6hylwe","value":1},{"source":"20250506164324-csw026m","target":"20250508102758-u01h899","value":1},{"source":"20250506164324-csw026m","target":"20250506230139-lnmadl3","value":1},{"source":"20250506164324-csw026m","target":"20250507135108-7plxwem","value":1},{"source":"20250506164324-csw026m","target":"20250507101913-9jo95mk","value":1},{"source":"20250506164324-csw026m","target":"20250615054852-jaujqy6","value":1},{"source":"20250506164324-csw026m","target":"20250616021259-6nf4yjv","value":1},{"source":"20250704120831-gxq5is1","target":"20250616021259-6nf4yjv","value":1},{"source":"20250704120831-gxq5is1","target":"20250507101913-9jo95mk","value":1},{"source":"20250704120831-gxq5is1","target":"20250506230139-lnmadl3","value":1},{"source":"20250704120831-gxq5is1","target":"20250507101719-g6hylwe","value":1},{"source":"20250704120831-gxq5is1","target":"20250507152346-lt7yop4","value":1},{"source":"20250507101719-g6hylwe","target":"20250506230139-lnmadl3","value":1},{"source":"20250507101719-g6hylwe","target":"20250506183737-jh03nc2","value":1}],"nodes":[{"connections":9,"id":"20250506164324-csw026m","tags":["index"],"title":"SyMark: Transform Your SiYuan Notes into Beautiful Websites"},{"connections":6,"id":"20250704120831-gxq5is1","tags":[],"title":"Styles test"},{"connections":1,"id":"20250615054852-jaujqy6","tags":[],"title":"Design philosophy of SyMark"},{"connections":1,"id":"20250508102758-u01h899","tags":[],"title":"Benchmarks"},{"connections":3,"id":"20250506230139-lnmadl3","tags":["Features"],"title":"Themes"},{"connections":1,"id":"20250507135108-7plxwem","tags":["Features"],"title":"Templating"},{"connections":2,"id":"20250616021259-6nf4yjv","tags":[],"title":"How SyMark works"},{"connections":2,"id":"20250507101913-9jo95mk","tags":[],"title":"Build software to last"},{"connections":4,"id":"20250507101719-g6hylwe","tags":["Features"],"title":"Changelog"},{"connections":0,"id":"20250705113409-b3p4pqm","tags":[],"title":"Getting Started with SyMark"},{"connections":1,"id":"20250507152346-lt7yop4","tags":[],"title":"Showcase"},{"connections":2,"id":"20250506183737-jh03nc2","tags":[],"title":"How to use SyMark"}]};
+        const graphData = {"links":[{"source":"20250506164324-csw026m","target":"20250506183737-jh03nc2","value":1},{"source":"20250506164324-csw026m","target":"20250704120831-gxq5is1","value":1},{"source":"20250506164324-csw026m","target":"20250507101719-g6hylwe","value":1},{"source":"20250506164324-csw026m","target":"20250508102758-u01h899","value":1},{"source":"20250506164324-csw026m","target":"20250506230139-lnmadl3","value":1},{"source":"20250506164324-csw026m","target":"20250507135108-7plxwem","value":1},{"source":"20250506164324-csw026m","target":"20250507101913-9jo95mk","value":1},{"source":"20250506164324-csw026m","target":"20250615054852-jaujqy6","value":1},{"source":"20250506164324-csw026m","target":"20250616021259-6nf4yjv","value":1},{"source":"20250704120831-gxq5is1","target":"20250616021259-6nf4yjv","value":1},{"source":"20250704120831-gxq5is1","target":"20250507101913-9jo95mk","value":1},{"source":"20250704120831-gxq5is1","target":"20250506230139-lnmadl3","value":1},{"source":"20250704120831-gxq5is1","target":"20250507101719-g6hylwe","value":1},{"source":"20250704120831-gxq5is1","target":"20250507152346-lt7yop4","value":1},{"source":"20250507101719-g6hylwe","target":"20250506230139-lnmadl3","value":1},{"source":"20250507101719-g6hylwe","target":"20250506183737-jh03nc2","value":1}],"nodes":[{"connections":9,"id":"20250506164324-csw026m","tags":["index"],"title":"SyMark: Transform Your SiYuan Notes into Beautiful Websites"},{"connections":0,"id":"20250705113409-b3p4pqm","tags":[],"title":"Getting Started with SyMark"},{"connections":1,"id":"20250507152346-lt7yop4","tags":[],"title":"Showcase"},{"connections":3,"id":"20250506230139-lnmadl3","tags":["Features"],"title":"Themes"},{"connections":1,"id":"20250615054852-jaujqy6","tags":[],"title":"Design philosophy of SyMark"},{"connections":2,"id":"20250507101913-9jo95mk","tags":[],"title":"Build software to last"},{"connections":2,"id":"20250616021259-6nf4yjv","tags":[],"title":"How SyMark works"},{"connections":1,"id":"20250507135108-7plxwem","tags":["Features"],"title":"Templating"},{"connections":6,"id":"20250704120831-gxq5is1","tags":[],"title":"Styles test"},{"connections":1,"id":"20250508102758-u01h899","tags":[],"title":"Benchmarks"},{"connections":2,"id":"20250506183737-jh03nc2","tags":[],"title":"How to use SyMark"},{"connections":4,"id":"20250507101719-g6hylwe","tags":["Features"],"title":"Changelog"}]};
 
         // Map tags to colors - will be populated dynamically
         const tagColors = {"Features":"#4285F4"};
@@ -128,7 +124,7 @@
         function initGraph() {
             const width = document.getElementById('graph').clientWidth;
             const height = document.getElementById('graph').clientHeight;
-            
+
             // Calculate an extended area for the graph to explore beyond viewport
             const extendedWidth = width * 2;
             const extendedHeight = height * 2;
@@ -184,11 +180,11 @@
             for (let i = 0; i < 500; i++) {
                 simulation.tick();
             }
-            
+
             // Spread out nodes more evenly for a prettier initial layout
             // First ensure nodes aren't too close to each other
             const initialSpreadFactor = 1.5; // Increase this to spread nodes out more
-            
+
             // Apply forces multiple times to separate clusters nicely
             for (let i = 0; i < 50; i++) {
                 graphData.nodes.forEach(nodeA => {
@@ -198,7 +194,7 @@
                             const dx = nodeA.x - nodeB.x;
                             const dy = nodeA.y - nodeB.y;
                             const distance = Math.sqrt(dx * dx + dy * dy);
-                            
+
                             // If nodes are too close, push them apart
                             if (distance < 100 * initialSpreadFactor) {
                                 const pushFactor = (100 * initialSpreadFactor - distance) / distance * 0.05;
@@ -211,7 +207,7 @@
                     });
                 });
             }
-            
+
             // Then keep nodes at reasonable distances without strict boundaries
             graphData.nodes.forEach(node => {
                 // Gently nudge nodes toward center if they're extremely far out
@@ -222,14 +218,14 @@
                     node.y = node.y > height/2 ? height * 1.2 : -height * 0.2;
                 }
             });
-            
+
             // After initial positioning, set some constraints to limit cluster drifting
             const initialPositions = graphData.nodes.map(node => ({
                 id: node.id,
                 x: node.x,
                 y: node.y
             }));
-            
+
             const node = g.append('g')
                 .attr('class', 'nodes')
                 .selectAll('circle')
@@ -268,28 +264,6 @@
             // Node hover effects
             node.on('mouseover', function(event, d) {
                     const [x, y] = d3.pointer(event, document.body);
-                    // Build tooltip content
-                    let tooltipContent = `<strong>${d.title || d.id}</strong>`;
-
-                    // Add tags if present
-                    if (d.tags && d.tags.length > 0) {
-                        tooltipContent += '<br><span style="font-size: 12px;">Tags: ';
-                        d.tags.forEach((tag, i) => {
-                            const color = tagColors[tag] || "#69b3a2";
-                            tooltipContent += `<span style="display: inline-block; margin-right: 5px; padding: 2px 5px; background: ${color}; color: white; border-radius: 3px;">${tag}</span>`;
-                        });
-                        tooltipContent += '</span>';
-                    }
-
-                    // Add number of connections
-                    tooltipContent += `<br>Connections: ${d.connections || 0}`;
-
-                    tooltip.style('left', (x + 10) + 'px')
-                           .style('top', (y + 10) + 'px')
-                           .style('opacity', 0.95)
-                           .style('transform', 'translateY(0)')
-                           .html(tooltipContent);
-
                     // Highlight connections
                     link.style('stroke', l => (l.source.id === d.id || l.target.id === d.id) ? '#ff7700' : '#999')
                         .style('stroke-opacity', l => (l.source.id === d.id || l.target.id === d.id) ? 1 : 0.1)
@@ -335,7 +309,7 @@
                 // This function is called on each tick of the simulation
                 updatePositions();
             });
-            
+
             // Function to update all visual elements based on current node positions
             function updatePositions() {
                 // Draw the links between nodes
@@ -359,10 +333,10 @@
                 if (!event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
                 d.fy = d.y;
-                
+
                 // Mark this node as being dragged
                 d._isDragging = true;
-                
+
                 // Find all nodes in the same connected component
                 const component = findConnectedComponent(d);
                 component.forEach(node => {
@@ -374,31 +348,31 @@
                 // Update the position of the dragged node
                 d.fx = event.x;
                 d.fy = event.y;
-                
+
                 // Let the simulation handle the physics, but update visuals immediately
                 updatePositions();
-                
+
                 // Apply a small force to keep the simulation active during drag
                 if (!event.active) simulation.alpha(0.3).restart();
-                
+
                 // Check if any dragged nodes are getting too close to non-component nodes
                 let needsSpacing = false;
                 const minDistance = 100; // Minimum comfortable distance between clusters
-                
+
                 // Only check for spacing issues if we're actively dragging
                 if (d._isDragging) {
                     // Get all nodes in the dragged component
                     const draggedNodes = graphData.nodes.filter(n => n._inDragComponent);
                     // Get all nodes not in the dragged component
                     const otherNodes = graphData.nodes.filter(n => !n._inDragComponent);
-                    
+
                     // Check if any dragged node is too close to any non-dragged node
                     for (const draggedNode of draggedNodes) {
                         for (const otherNode of otherNodes) {
                             const dx = draggedNode.x - otherNode.x;
                             const dy = draggedNode.y - otherNode.y;
                             const distance = Math.sqrt(dx*dx + dy*dy);
-                            
+
                             if (distance < minDistance) {
                                 needsSpacing = true;
                                 break;
@@ -407,7 +381,7 @@
                         if (needsSpacing) break;
                     }
                 }
-                
+
                 // Only apply spacing forces if there's an actual proximity issue
                 if (needsSpacing) {
                     graphData.nodes.forEach(node => {
@@ -420,14 +394,14 @@
                                     x: d3.mean(graphData.nodes.filter(n => n._inDragComponent), n => n.x),
                                     y: d3.mean(graphData.nodes.filter(n => n._inDragComponent), n => n.y)
                                 };
-                                
+
                                 const dx = node.x - draggedCenter.x;
                                 const dy = node.y - draggedCenter.y;
                                 const distance = Math.sqrt(dx*dx + dy*dy);
-                                
+
                                 // Apply stronger repulsion the closer nodes are
                                 const repulsionStrength = Math.max(0, (minDistance * 2 - distance) / minDistance) * 0.1;
-                                
+
                                 if (distance > 0) {
                                     node.x += dx / distance * repulsionStrength * minDistance;
                                     node.y += dy / distance * repulsionStrength * minDistance;
@@ -441,21 +415,21 @@
             function dragended(event, d) {
                 // Mark node as no longer being dragged
                 d._isDragging = false;
-                
+
                 // Clear fixed position so the node can move freely again
                 d.fx = null;
                 d.fy = null;
-                
+
                 // Reset the component flag for all nodes
                 graphData.nodes.forEach(node => {
                     node._inDragComponent = false;
                 });
-                
+
                 if (!event.active) simulation.alphaTarget(0);
-                
+
                 // Apply a small force to adjust after drag
                 simulation.alpha(0.3).restart();
-                
+
                 // Update initial positions to the new state to prevent snapback
                 initialPositions.forEach(pos => {
                     const node = graphData.nodes.find(n => n.id === pos.id);
@@ -474,13 +448,13 @@
                     (l.source.id === b.id && l.target.id === a.id)
                 );
             }
-            
+
             // Find all nodes in the same connected component using BFS
             function findConnectedComponent(startNode) {
                 const component = [startNode];
                 const visited = new Set([startNode.id]);
                 const queue = [startNode];
-                
+
                 while (queue.length > 0) {
                     const current = queue.shift();
                     // Find all nodes connected to the current node
@@ -491,7 +465,7 @@
                         } else if (link.target.id === current.id) {
                             neighbor = link.source;
                         }
-                        
+
                         if (neighbor && !visited.has(neighbor.id)) {
                             visited.add(neighbor.id);
                             component.push(neighbor);
@@ -499,7 +473,7 @@
                         }
                     });
                 }
-                
+
                 return component;
             }
         }
