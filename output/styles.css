@@ -2,7 +2,9 @@
 :root {
     /* Light theme variables */
     --content-width: 700px;
-    --font-body: 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    --font-body:
+        "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Arial, sans-serif;
     --font-heading: var(--font-body);
     --text-color: #000;
     --text-secondary: #646464;
@@ -37,15 +39,15 @@
 
     /* Default SiYuan colors */
     --b3-theme-primary: #3573f0;
-    --b3-theme-primary-light: rgba(53, 115, 240, .72);
-    --b3-theme-primary-lighter: rgba(53, 115, 240, .48);
-    --b3-theme-primary-lightest: rgba(53, 115, 240, .24);
+    --b3-theme-primary-light: rgba(53, 115, 240, 0.72);
+    --b3-theme-primary-lighter: rgba(53, 115, 240, 0.48);
+    --b3-theme-primary-lightest: rgba(53, 115, 240, 0.24);
     --b3-theme-secondary: #f3a92f;
     --b3-theme-background: #1e1e1e;
-    --b3-theme-background-light: rgba(255, 255, 255, .075);
+    --b3-theme-background-light: rgba(255, 255, 255, 0.075);
     --b3-theme-surface: #262626;
-    --b3-theme-surface-light: rgba(41, 42, 45, .86);
-    --b3-theme-surface-lighter: rgba(230, 230, 230, .06);
+    --b3-theme-surface-light: rgba(41, 42, 45, 0.86);
+    --b3-theme-surface-lighter: rgba(230, 230, 230, 0.06);
     --b3-theme-error: #d23f31;
     --b3-theme-success: #65b84d;
     --b3-theme-on-primary: #fff;
@@ -105,15 +107,15 @@
         --header-border-color: #393d40;
         /* Default SiYuan colors */
         --b3-theme-primary: #3573f0;
-        --b3-theme-primary-light: rgba(53, 115, 240, .72);
-        --b3-theme-primary-lighter: rgba(53, 115, 240, .48);
-        --b3-theme-primary-lightest: rgba(53, 115, 240, .24);
+        --b3-theme-primary-light: rgba(53, 115, 240, 0.72);
+        --b3-theme-primary-lighter: rgba(53, 115, 240, 0.48);
+        --b3-theme-primary-lightest: rgba(53, 115, 240, 0.24);
         --b3-theme-secondary: #f3a92f;
         --b3-theme-background: #1e1e1e;
-        --b3-theme-background-light: rgba(255, 255, 255, .075);
+        --b3-theme-background-light: rgba(255, 255, 255, 0.075);
         --b3-theme-surface: #262626;
-        --b3-theme-surface-light: rgba(41, 42, 45, .86);
-        --b3-theme-surface-lighter: rgba(230, 230, 230, .06);
+        --b3-theme-surface-light: rgba(41, 42, 45, 0.86);
+        --b3-theme-surface-lighter: rgba(230, 230, 230, 0.06);
         --b3-theme-error: #d23f31;
         --b3-theme-success: #65b84d;
         --b3-theme-on-primary: #fff;
@@ -230,7 +232,7 @@
     align-items: center;
     justify-content: center;
     padding: 5px;
-   border-radius: 6px;
+    border-radius: 6px;
     transition: background-color 0.2s ease;
 }
 
@@ -375,7 +377,7 @@ img {
     max-width: 100%;
     height: auto;
     display: block;
-   border-radius: 6px;
+    border-radius: 6px;
 }
 
 /* Figure and caption styling */
@@ -443,7 +445,11 @@ figcaption {
     left: 0;
     width: 100%;
     height: var(--header-height);
-    background: linear-gradient(to bottom, var(--bg-color) 60%, transparent 100%);
+    background: linear-gradient(
+        to bottom,
+        var(--bg-color) 60%,
+        transparent 100%
+    );
     border-bottom: none;
     z-index: 1000;
 }
@@ -499,7 +505,7 @@ figcaption {
     color: var(--text-secondary);
     transition: color 0.2s ease;
     padding: 6px;
-   border-radius: 6px;
+    border-radius: 6px;
 }
 
 .header-icon:hover {
@@ -547,9 +553,18 @@ a {
 }
 
 .tag a {
+    text-decoration: none;
+    color: var(--text-color);
+    padding: 1px 2px;
+    border-radius: 2px;
+    border-bottom: 2px dotted var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tag a:hover {
+    border-bottom-color: var(--link-color);
     color: var(--link-color);
-    font-weight: 500;
-    text-decoration: underline;
 }
 
 .tags-container {
@@ -597,7 +612,7 @@ a {
     height: 200px;
     background-size: cover;
     background-position: center;
-   border-radius: 6px;
+    border-radius: 6px;
     margin-bottom: var(--spacing-3);
 }
 
@@ -830,17 +845,17 @@ a {
 .article-content pre {
     background-color: var(--gray-3);
     border: 1px solid var(--border-color);
-   border-radius: 6px;
+    border-radius: 6px;
     padding: 16px;
     margin-bottom: 16px;
     overflow-x: auto;
-    font-family: 'SF Mono', 'Consolas', monospace;
+    font-family: "SF Mono", "Consolas", monospace;
     font-size: 14px;
     line-height: 1.5;
 }
 
 .article-content code {
-    font-family: 'SF Mono', 'Consolas', monospace;
+    font-family: "SF Mono", "Consolas", monospace;
     font-size: 14px;
     background-color: var(--gray-3);
     padding: 2px 4px;
@@ -858,7 +873,7 @@ a {
     background-color: var(--gray-3);
     border: 1px solid var(--border-color);
     border-radius: 3px;
-    box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
     color: var(--text-color);
     display: inline-block;
     font-family: var(--font-body);
@@ -1004,8 +1019,8 @@ a {
 /* Ensure no list-style behavior */
 .task-checkbox-unchecked::marker,
 .task-checkbox-checked::marker {
-  display: none;
-  content: none;
+    display: none;
+    content: none;
 }
 
 .task-checkbox-checked {
@@ -1022,7 +1037,7 @@ a {
 }
 
 .task-checkbox-checked:after {
-    content: '';
+    content: "";
     position: absolute;
     left: 6px;
     top: 2px;
@@ -1145,8 +1160,12 @@ a {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 .tooltip .right i {
@@ -1160,13 +1179,13 @@ a {
 }
 
 .tooltip .right i::after {
-    content: '';
+    content: "";
     position: absolute;
     width: 12px;
     height: 12px;
     left: 0;
     top: 50%;
-    transform: translate(50%,-50%) rotate(-45deg);
+    transform: translate(50%, -50%) rotate(-45deg);
     background-color: var(--primary-bg-color);
     box-shadow: 0 1px 8px var(--primary-box-shadow-color);
     border-left: 1px solid var(--border-color);
@@ -1208,12 +1227,73 @@ a {
     color: var(--link-color);
 }
 
+/* Memo highlighting styles */
+.memo-highlight {
+    background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        rgba(255, 193, 7, 0.3) 90%
+    );
+    color: inherit;
+    padding: 1px 2px;
+    border-bottom: 1.5px dashed #ffc107;
+    cursor: help;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.memo-highlight:hover {
+    background: linear-gradient(
+        to bottom,
+        transparent 50%,
+        rgba(23, 162, 184, 0.3) 90%
+    );
+    border-bottom-color: #17a2b8;
+}
+
+/* Dark mode memo highlighting */
+@media (prefers-color-scheme: dark) {
+    .memo-highlight {
+        background: linear-gradient(
+            to bottom,
+            transparent 60%,
+            rgba(255, 193, 7, 0.2) 60%
+        );
+        border-bottom-color: #ffc107;
+    }
+
+    .memo-highlight:hover {
+        background: linear-gradient(
+            to bottom,
+            transparent 60%,
+            rgba(23, 162, 184, 0.2) 60%
+        );
+        border-bottom-color: #17a2b8;
+    }
+
+    .tag a {
+        border-bottom-color: var(--text-secondary);
+    }
+
+    .tag a:hover {
+        border-bottom-color: var(--link-color);
+        color: var(--link-color);
+    }
+}
+
+.memo-text {
+    /* Wrapper for the memo text content */
+    display: inline;
+}
+
 /* Responsive adjustments */
 @media (max-width: 640px) {
     .container {
         padding-top: calc(var(--header-height) + 32px);
         width: calc(100% - 40px);
-        transition: transform 0.3s ease, opacity 0.3s ease;
+        transition:
+            transform 0.3s ease,
+            opacity 0.3s ease;
     }
 
     .header-content {
@@ -1254,7 +1334,7 @@ a {
     }
 
     .tooltip .right i::after {
-        content: '';
+        content: "";
         position: absolute;
         width: 12px;
         height: 12px;

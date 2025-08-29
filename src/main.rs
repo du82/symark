@@ -1,16 +1,16 @@
 //! SyMark: Static site generator for SiYuan notes.
 //! Includes a D3.js visualization for exploring note connections.
 
+use base64::decode;
+use chrono::Local;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::collections::{HashMap, HashSet};
+use std::env;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::env;
-use serde::{Deserialize, Serialize};
-use chrono::Local;
-use base64::decode;
 use std::time::Instant;
-use serde_json::json;
 
 #[derive(Debug, Deserialize)]
 struct Note {
@@ -101,26 +101,30 @@ fn get_style_class(style: &str, is_inline: bool) -> (Option<String>, bool) {
         "warning-box"
     } else if style.contains("var(--b3-card-error-background)") {
         "error-box"
-    } else if style.contains("background-color:") || style.contains("background-color=") ||
-              style.contains("background:") || style.contains("--b3-parent-background") {
+    } else if style.contains("background-color:")
+        || style.contains("background-color=")
+        || style.contains("background:")
+        || style.contains("--b3-parent-background")
+    {
         // Apply custom-box class to any block with a background color
         "custom-box"
     } else {
         return (None, false);
     };
-    
+
     // Determine if it's a predefined style (info, success, warning, error)
-    let is_predefined = style.contains("var(--b3-card-info-background)") || 
-                        style.contains("var(--b3-card-success-background)") ||
-                        style.contains("var(--b3-card-warning-background)") || 
-                        style.contains("var(--b3-card-error-background)");
+    let is_predefined = style.contains("var(--b3-card-info-background)")
+        || style.contains("var(--b3-card-success-background)")
+        || style.contains("var(--b3-card-warning-background)")
+        || style.contains("var(--b3-card-error-background)");
 
     // Keep original style for custom backgrounds, but not for predefined styles
     // This allows custom backgrounds to retain their color while using predefined CSS for info/warning/etc boxes
-    let keep_style = !is_predefined && (
-        style.contains("background-color:") || style.contains("background-color=") ||
-        style.contains("background:") || style.contains("--b3-parent-background")
-    );
+    let keep_style = !is_predefined
+        && (style.contains("background-color:")
+            || style.contains("background-color=")
+            || style.contains("background:")
+            || style.contains("--b3-parent-background"));
 
     if is_inline {
         (Some(format!("inline-{}", base_class)), keep_style)
@@ -134,12 +138,18 @@ fn read_template(path: &str) -> String {
         Ok(content) => content,
         Err(e) => {
             // Try to read from default theme as fallback
-            let fallback_path = path.replace(&format!("themes/{}/", env::args().nth(1).unwrap_or_else(|| "default".to_string())), "themes/default/");
+            let fallback_path = path.replace(
+                &format!(
+                    "themes/{}/",
+                    env::args().nth(1).unwrap_or_else(|| "default".to_string())
+                ),
+                "themes/default/",
+            );
             match fs::read_to_string(&fallback_path) {
                 Ok(content) => {
                     println!("Read template from fallback path: {}", fallback_path);
                     content
-                },
+                }
                 Err(_) => {
                     eprintln!("Error reading template file {}: {}", path, e);
                     String::new()
@@ -178,11 +188,7 @@ fn extract_toc_items(blocks: &[Block], headings: &mut Vec<TocItem>, id_counter: 
                 }
             }
 
-            headings.push(TocItem {
-                id,
-                text,
-                level,
-            });
+            headings.push(TocItem { id, text, level });
         }
 
         extract_toc_items(&block.Children, headings, id_counter);
@@ -226,7 +232,8 @@ fn naturalize_date(date_str: &str) -> String {
         let formatted_date = format!("{} {}, {}", month_name, day_with_suffix, year);
 
         if date_str.len() > 8 && date_str.chars().nth(8) == Some('T') {
-            if date_str.len() >= 14 { // Has at least hour and minute
+            if date_str.len() >= 14 {
+                // Has at least hour and minute
                 let hour: u32 = date_str[9..11].parse().unwrap_or(0);
                 let minute: u32 = date_str[11..13].parse().unwrap_or(0);
 
@@ -247,9 +254,10 @@ fn naturalize_date(date_str: &str) -> String {
     }
 
     // ISO format date handling (YYYY-MM-DD)
-    if date_str.len() >= 10 &&
-       date_str.chars().nth(4) == Some('-') &&
-       date_str.chars().nth(7) == Some('-') {
+    if date_str.len() >= 10
+        && date_str.chars().nth(4) == Some('-')
+        && date_str.chars().nth(7) == Some('-')
+    {
         // Extract from ISO format
         if let Ok(year) = date_str[0..4].parse::<u32>() {
             if let Ok(month) = date_str[5..7].parse::<u32>() {
@@ -294,8 +302,10 @@ fn naturalize_date(date_str: &str) -> String {
                                 };
 
                                 let am_pm = if hour >= 12 { "PM" } else { "AM" };
-                                return format!("{} {}, {} at {}:{:02} {}",
-                                    month_name, day_with_suffix, year, hour12, minute, am_pm);
+                                return format!(
+                                    "{} {}, {} at {}:{:02} {}",
+                                    month_name, day_with_suffix, year, hour12, minute, am_pm
+                                );
                             }
                         }
                     }
@@ -316,7 +326,11 @@ fn generate_toc_html(headings: &[TocItem]) -> String {
     for heading in headings {
         // Only include h2 and h3 in the TOC
         if heading.level >= 2 && heading.level <= 3 {
-            let class = if heading.level == 3 { " toc-subitem" } else { "" };
+            let class = if heading.level == 3 {
+                " toc-subitem"
+            } else {
+                ""
+            };
             toc_html.push_str(&format!(
                 "<li class=\"toc-item{}\"><a class=\"toc-link\" href=\"#{}\">{}",
                 class, heading.id, heading.text
@@ -397,7 +411,10 @@ fn main() -> std::io::Result<()> {
                 graph_file.write_all(cleaned_graph_template.as_bytes())?;
             }
 
-            println!("Copied default theme files to new theme directory: {:?}", theme_dir);
+            println!(
+                "Copied default theme files to new theme directory: {:?}",
+                theme_dir
+            );
         } else {
             // Create empty template files if default theme doesn't exist
             println!("Creating empty template files in theme directory...");
@@ -417,7 +434,10 @@ fn main() -> std::io::Result<()> {
             let mut graph_file = File::create(theme_dir.join("graph.html"))?;
             graph_file.write_all(cleaned_graph_template.as_bytes())?;
 
-            println!("Created empty template files in theme directory: {:?}", theme_dir);
+            println!(
+                "Created empty template files in theme directory: {:?}",
+                theme_dir
+            );
         }
     }
 
@@ -481,7 +501,9 @@ fn main() -> std::io::Result<()> {
                         // Check if this note has the "index" tag
                         if tag == "index" {
                             if index_note_id.is_some() {
-                                println!("Warning: Multiple notes with 'index' tag found. Using the last one found.");
+                                println!(
+                                    "Warning: Multiple notes with 'index' tag found. Using the last one found."
+                                );
                             }
                             index_note_id = Some(id.clone());
                         }
@@ -500,18 +522,22 @@ fn main() -> std::io::Result<()> {
     let html_template_path = format!("themes/{}/page.html", theme_name);
     let html_template = read_template(&html_template_path);
 
-
     if let Some(index_id) = &index_note_id {
         println!("Generating custom index page with ID: {}", index_id);
 
-        generate_custom_index_page(index_id, &notes_map, &id_to_path, &output_dir, &all_tags, &html_template)?;
+        generate_custom_index_page(
+            index_id,
+            &notes_map,
+            &id_to_path,
+            &output_dir,
+            &all_tags,
+            &html_template,
+        )?;
         page_count += 1;
-
 
         generate_all_notes_page(&notes_map, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
     } else {
-
         generate_index_page(&notes_map, &output_dir, &all_tags, &html_template)?;
         page_count += 1;
     }
@@ -519,7 +545,14 @@ fn main() -> std::io::Result<()> {
     println!("Generating HTML for each note...");
     for (id, note) in &notes_map {
         println!("Generating HTML for note: {}", id);
-        generate_html_for_note(id, &notes_map, &id_to_path, &output_dir, &all_tags, &html_template)?;
+        generate_html_for_note(
+            id,
+            &notes_map,
+            &id_to_path,
+            &output_dir,
+            &all_tags,
+            &html_template,
+        )?;
         page_count += 1;
     }
 
@@ -535,9 +568,6 @@ fn main() -> std::io::Result<()> {
     let graph_template = read_template(&graph_template_path);
     generate_graph_page(&notes_map, &output_dir, &all_tags, &graph_template)?;
     page_count += 1;
-
-
-
 
     let elapsed = start_time.elapsed();
     let elapsed_ms = elapsed.as_millis();
@@ -562,11 +592,14 @@ fn main() -> std::io::Result<()> {
                     }
                 }
             }
-        },
+        }
         Err(e) => println!("  Error reading output directory: {}", e),
     }
 
-    println!("HTML generation complete. Output written to {:?}", output_dir);
+    println!(
+        "HTML generation complete. Output written to {:?}",
+        output_dir
+    );
     Ok(())
 }
 
@@ -601,7 +634,6 @@ fn find_and_copy_assets(dir: &Path, output_assets_dir: &Path) -> std::io::Result
             copy_directory(dir, target_dir)?;
             println!("Copied assets from {:?} to {:?}", dir, target_dir);
         }
-
 
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
@@ -739,23 +771,33 @@ fn generate_custom_index_page(
 
     // Set OpenGraph published time in ISO 8601 format
     if !created_date.is_empty() && created_date.len() >= 14 {
-        let og_published_time = format!("{}-{}-{}T{}:{}:{}Z",
-            &created_date[0..4], &created_date[4..6], &created_date[6..8],
-            &created_date[8..10], &created_date[10..12], &created_date[12..14]);
+        let og_published_time = format!(
+            "{}-{}-{}T{}:{}:{}Z",
+            &created_date[0..4],
+            &created_date[4..6],
+            &created_date[6..8],
+            &created_date[8..10],
+            &created_date[10..12],
+            &created_date[12..14]
+        );
         html = html.replace("{{og_published_time}}", &og_published_time);
     } else {
-
         let now = Local::now();
         let og_published_time = now.format("%Y-%m-%dT%H:%M:%SZ").to_string();
         html = html.replace("{{og_published_time}}", &og_published_time);
     }
 
-
     if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
         if note.Properties.updated.len() >= 14 {
-            let og_modified_time = format!("{}-{}-{}T{}:{}:{}Z",
-                &note.Properties.updated[0..4], &note.Properties.updated[4..6], &note.Properties.updated[6..8],
-                &note.Properties.updated[8..10], &note.Properties.updated[10..12], &note.Properties.updated[12..14]);
+            let og_modified_time = format!(
+                "{}-{}-{}T{}:{}:{}Z",
+                &note.Properties.updated[0..4],
+                &note.Properties.updated[4..6],
+                &note.Properties.updated[6..8],
+                &note.Properties.updated[8..10],
+                &note.Properties.updated[10..12],
+                &note.Properties.updated[12..14]
+            );
             html = html.replace("{{og_modified_time}}", &og_modified_time);
         } else {
             html = html.replace("{{og_modified_time}}", "");
@@ -779,28 +821,37 @@ fn generate_custom_index_page(
     html = html.replace("{{author_name}}", "Notes Author");
     html = html.replace("{{publish_date}}", &naturalize_date(&created_date));
 
+    let formatted_date =
+        if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+            if note.Properties.updated.len() >= 14 {
+                let og_modified_time = format!(
+                    "{}-{}-{}T{}:{}:{}Z",
+                    &note.Properties.updated[0..4],
+                    &note.Properties.updated[4..6],
+                    &note.Properties.updated[6..8],
+                    &note.Properties.updated[8..10],
+                    &note.Properties.updated[10..12],
+                    &note.Properties.updated[12..14]
+                );
+                html = html.replace("{{og_modified_time}}", &og_modified_time);
+            } else {
+                html = html.replace(
+                    "<meta property=\"article:modified_time\" content=\"{{og_modified_time}}\">",
+                    "",
+                );
+            }
 
-    let formatted_date = if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
-
-        if note.Properties.updated.len() >= 14 {
-            let og_modified_time = format!("{}-{}-{}T{}:{}:{}Z",
-                &note.Properties.updated[0..4], &note.Properties.updated[4..6], &note.Properties.updated[6..8],
-                &note.Properties.updated[8..10], &note.Properties.updated[10..12], &note.Properties.updated[12..14]);
-            html = html.replace("{{og_modified_time}}", &og_modified_time);
+            format!(
+                "Created on {}, updated on {}",
+                naturalize_date(&created_date),
+                naturalize_date(&note.Properties.updated)
+            )
         } else {
+            // If no image, remove the OpenGraph image tag
+            html = html.replace("<meta property=\"og:image\" content=\"{{og_image}}\">", "");
 
-            html = html.replace("<meta property=\"article:modified_time\" content=\"{{og_modified_time}}\">", "");
-        }
-
-        format!("Created on {}, updated on {}",
-            naturalize_date(&created_date),
-            naturalize_date(&note.Properties.updated))
-    } else {
-        // If no image, remove the OpenGraph image tag
-        html = html.replace("<meta property=\"og:image\" content=\"{{og_image}}\">", "");
-
-        format!("Created on {}", naturalize_date(&created_date))
-    };
+            format!("Created on {}", naturalize_date(&created_date))
+        };
     html = html.replace("{{last_updated_date}}", &formatted_date);
 
     html = html.replace("{{category}}", "Notes");
@@ -824,7 +875,6 @@ fn generate_custom_index_page(
 
     html = html.replace("{{content}}", &content_with_link);
 
-
     let mut meta = String::new();
 
     // Display creation date as a tag
@@ -845,7 +895,10 @@ fn generate_custom_index_page(
 
     // Add tags
     if !note.Properties.tags.is_empty() {
-        let mut tags: Vec<_> = note.Properties.tags.split(',')
+        let mut tags: Vec<_> = note
+            .Properties
+            .tags
+            .split(',')
             .map(|t| t.trim())
             .filter(|t| *t != "index")
             .collect();
@@ -863,7 +916,10 @@ fn generate_custom_index_page(
     }
 
     html = html.replace("{{note_meta}}", &meta);
-    html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
+    html = html.replace(
+        "{{generation_date}}",
+        &Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+    );
 
     // Remove zero-width spaces and clean up any remaining template variables
     let cleaned_html = remove_zero_width_spaces(&html);
@@ -879,7 +935,6 @@ fn generate_custom_index_page(
     Ok(())
 }
 
-
 fn generate_all_notes_page(
     notes_map: &HashMap<String, Note>,
     output_dir: &Path,
@@ -893,7 +948,6 @@ fn generate_all_notes_page(
 
     // Define site base URL for OpenGraph - this should be configurable in the future
     let site_base_url = "https://du82.github.io/symark";
-
 
     html = html.replace("{{og_url}}", &format!("{}", site_base_url));
 
@@ -918,7 +972,10 @@ fn generate_all_notes_page(
     let formatted_date = format!("Created on {}", naturalize_date(&now));
     html = html.replace("{{last_updated_date}}", &formatted_date);
     // Create tag cloud metadata for all notes page
-    let meta = format!("<span class=\"meta-tag date-tag\">Created on {}</span>", naturalize_date(&now));
+    let meta = format!(
+        "<span class=\"meta-tag date-tag\">Created on {}</span>",
+        naturalize_date(&now)
+    );
     html = html.replace("{{note_meta}}", &meta);
     html = html.replace("{{last_updated_date}}", ""); // Clear this as we're using note_meta
 
@@ -932,15 +989,17 @@ fn generate_all_notes_page(
     html = html.replace("{{/header_image}}", " -->");
 
     // Generate navigation items - sort by title for better navigation
-    let mut sorted_notes: Vec<_> = notes_map.values().filter(|n| !n.Properties.title.is_empty()).collect();
+    let mut sorted_notes: Vec<_> = notes_map
+        .values()
+        .filter(|n| !n.Properties.title.is_empty())
+        .collect();
     sorted_notes.sort_by(|a, b| a.Properties.title.cmp(&b.Properties.title));
 
     let mut nav_items = String::new();
     for note in &sorted_notes {
         nav_items.push_str(&format!(
             "<li><a href=\"{}.html\">{}</a></li>\n",
-            note.ID,
-            note.Properties.title
+            note.ID, note.Properties.title
         ));
     }
 
@@ -987,8 +1046,7 @@ fn generate_all_notes_page(
     for note in &sorted_notes {
         content.push_str(&format!(
             "<li><a href=\"{}.html\">{}</a></li>\n",
-            note.ID,
-            note.Properties.title
+            note.ID, note.Properties.title
         ));
     }
     content.push_str("</ul>");
@@ -1001,7 +1059,10 @@ fn generate_all_notes_page(
 
     // Set metadata
     html = html.replace("{{note_meta}}", "");
-    html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
+    html = html.replace(
+        "{{generation_date}}",
+        &Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+    );
 
     // Remove zero-width spaces and clean up template variables before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
@@ -1065,15 +1126,17 @@ fn generate_index_page(
     html = html.replace("{{back_navigation}}", "");
 
     // Generate navigation items - sort by title for better navigation
-    let mut sorted_notes: Vec<_> = notes_map.values().filter(|n| !n.Properties.title.is_empty()).collect();
+    let mut sorted_notes: Vec<_> = notes_map
+        .values()
+        .filter(|n| !n.Properties.title.is_empty())
+        .collect();
     sorted_notes.sort_by(|a, b| a.Properties.title.cmp(&b.Properties.title));
 
     let mut nav_items = String::new();
     for note in &sorted_notes {
         nav_items.push_str(&format!(
             "<li><a href=\"{}.html\">{}</a></li>\n",
-            note.ID,
-            note.Properties.title
+            note.ID, note.Properties.title
         ));
     }
 
@@ -1120,8 +1183,7 @@ fn generate_index_page(
     for note in &sorted_notes {
         content.push_str(&format!(
             "<li><a href=\"{}.html\">{}</a></li>\n",
-            note.ID,
-            note.Properties.title
+            note.ID, note.Properties.title
         ));
     }
     content.push_str("</ul>");
@@ -1132,14 +1194,19 @@ fn generate_index_page(
 
     // Add graph visualization section
     content.push_str("<h2 id=\"section-graph\">Content Graph</h2>\n");
-    content.push_str("<p>Explore the connections between notes in an interactive visualization.</p>\n");
+    content.push_str(
+        "<p>Explore the connections between notes in an interactive visualization.</p>\n",
+    );
     content.push_str("<p><a href=\"graph.html\" class=\"nav-link\">View Content Graph</a></p>\n");
 
     html = html.replace("{{content}}", &content);
 
     // Set metadata
     html = html.replace("{{note_meta}}", "");
-    html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
+    html = html.replace(
+        "{{generation_date}}",
+        &Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+    );
 
     // Remove zero-width spaces and clean up template variables before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
@@ -1193,7 +1260,10 @@ fn generate_graph_page(
             color_index += 1;
         } else {
             // If we run out of colors, reuse them
-            tag_colors.insert(tag.clone(), predefined_colors[color_index % predefined_colors.len()].to_string());
+            tag_colors.insert(
+                tag.clone(),
+                predefined_colors[color_index % predefined_colors.len()].to_string(),
+            );
             color_index += 1;
         }
     }
@@ -1212,7 +1282,11 @@ fn generate_graph_page(
 
         // Collect all tags for color grouping
         let tags_list = if !note.Properties.tags.is_empty() {
-            note.Properties.tags.split(',').map(|t| t.trim().to_string()).collect::<Vec<_>>()
+            note.Properties
+                .tags
+                .split(',')
+                .map(|t| t.trim().to_string())
+                .collect::<Vec<_>>()
         } else {
             Vec::new()
         };
@@ -1288,8 +1362,10 @@ fn generate_graph_page(
     graph_html = graph_html.replace("{{tag_colors_json}}", &tag_colors_json.to_string());
 
     // Insert the graph data
-    graph_html = graph_html.replace("const graphData = {\n            nodes: [],\n            links: []\n        };",
-                                   &format!("const graphData = {};", graph_data.to_string()));
+    graph_html = graph_html.replace(
+        "const graphData = {\n            nodes: [],\n            links: []\n        };",
+        &format!("const graphData = {};", graph_data.to_string()),
+    );
 
     // Generate the HTML file
     let output_path = output_dir.join("graph.html");
@@ -1311,13 +1387,14 @@ fn scan_blocks_for_links(
     notes_map: &HashMap<String, Note>,
     source_id: &str,
     links: &mut Vec<serde_json::Value>,
-    node_indices: &HashMap<String, usize>
+    node_indices: &HashMap<String, usize>,
 ) {
     for block in blocks {
         // Check if this is a block reference
         if block.Type == "NodeTextMark" && block.TextMarkType == "block-ref" {
             let target_id = &block.TextMarkBlockRefID;
-            if !target_id.is_empty() && notes_map.contains_key(target_id) && source_id != target_id {
+            if !target_id.is_empty() && notes_map.contains_key(target_id) && source_id != target_id
+            {
                 // Check if this link already exists
                 let link_exists = links.iter().any(|link| {
                     let s = link["source"].as_str().unwrap();
@@ -1355,7 +1432,8 @@ fn generate_tag_page(
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
     // Filter notes with this tag for meta description and TOC
-    let tagged_notes: Vec<&Note> = notes_map.values()
+    let tagged_notes: Vec<&Note> = notes_map
+        .values()
         .filter(|n| n.Properties.tags.split(',').any(|t| t.trim() == tag))
         .collect();
     let note_count = tagged_notes.len();
@@ -1375,7 +1453,10 @@ fn generate_tag_page(
     let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
 
     // Create tag cloud metadata for tag page
-    let meta = format!("<span class=\"meta-tag date-tag\">Created on {}</span>", naturalize_date(&timestamp));
+    let meta = format!(
+        "<span class=\"meta-tag date-tag\">Created on {}</span>",
+        naturalize_date(&timestamp)
+    );
     html = html.replace("{{note_meta}}", &meta);
     html = html.replace("{{last_updated_date}}", ""); // Clear this as we're using note_meta
 
@@ -1389,7 +1470,10 @@ fn generate_tag_page(
     html = html.replace("{{/header_image}}", " -->");
 
     // Generate navigation items - sort by title
-    let mut sorted_notes: Vec<_> = notes_map.values().filter(|n| !n.Properties.title.is_empty()).collect();
+    let mut sorted_notes: Vec<_> = notes_map
+        .values()
+        .filter(|n| !n.Properties.title.is_empty())
+        .collect();
     sorted_notes.sort_by(|a, b| a.Properties.title.cmp(&b.Properties.title));
 
     // Generate table of contents
@@ -1423,7 +1507,8 @@ fn generate_tag_page(
         let class = if t == tag { "tag active" } else { "tag" };
 
         // Count notes with this tag
-        let tag_notes: Vec<&Note> = notes_map.values()
+        let tag_notes: Vec<&Note> = notes_map
+            .values()
             .filter(|n| n.Properties.tags.split(',').any(|tag| tag.trim() == *t))
             .collect();
         let tag_count = tag_notes.len();
@@ -1437,7 +1522,8 @@ fn generate_tag_page(
         // Add titles of up to 3 notes in the tooltip
         if !tag_notes.is_empty() {
             tooltip_text.push_str(": ");
-            let note_titles: Vec<String> = tag_notes.iter()
+            let note_titles: Vec<String> = tag_notes
+                .iter()
                 .take(3)
                 .map(|n| format!("\"{}\"", n.Properties.title))
                 .collect();
@@ -1476,7 +1562,10 @@ fn generate_tag_page(
                     if content_text.len() < 120 && note.Children.len() > 1 {
                         // Look for a second paragraph
                         for second_block in &note.Children {
-                            if second_block.ID != block.ID && second_block.Type == "P" && !second_block.Data.is_empty() {
+                            if second_block.ID != block.ID
+                                && second_block.Type == "P"
+                                && !second_block.Data.is_empty()
+                            {
                                 content_text.push_str(" ");
                                 content_text.push_str(&escape_html(&second_block.Data));
                                 break;
@@ -1516,7 +1605,11 @@ fn generate_tag_page(
                 let mut truncate_pos = 200;
                 // Find a good breakpoint (space or punctuation)
                 while truncate_pos > 150 {
-                    if content_text.chars().nth(truncate_pos).map_or(false, |c| c == ' ' || c == '.' || c == ',' || c == ';') {
+                    if content_text
+                        .chars()
+                        .nth(truncate_pos)
+                        .map_or(false, |c| c == ' ' || c == '.' || c == ',' || c == ';')
+                    {
                         break;
                     }
                     truncate_pos -= 1;
@@ -1529,7 +1622,10 @@ fn generate_tag_page(
                 content_text
             } else {
                 // If no content found, use tags as fallback
-                let tags = note.Properties.tags.split(',')
+                let tags = note
+                    .Properties
+                    .tags
+                    .split(',')
                     .map(|t| t.trim())
                     .filter(|t| !t.is_empty())
                     .collect::<Vec<_>>();
@@ -1563,7 +1659,10 @@ fn generate_tag_page(
 
     // Set metadata
     html = html.replace("{{note_meta}}", "");
-    html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
+    html = html.replace(
+        "{{generation_date}}",
+        &Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+    );
 
     // Remove zero-width spaces and cleanup template variables before writing to file
     let cleaned_html = remove_zero_width_spaces(&html);
@@ -1740,9 +1839,15 @@ fn generate_html_for_note(
 
     // Set OpenGraph published time in ISO 8601 format
     if !created_date.is_empty() && created_date.len() >= 14 {
-        let og_published_time = format!("{}-{}-{}T{}:{}:{}Z",
-            &created_date[0..4], &created_date[4..6], &created_date[6..8],
-            &created_date[8..10], &created_date[10..12], &created_date[12..14]);
+        let og_published_time = format!(
+            "{}-{}-{}T{}:{}:{}Z",
+            &created_date[0..4],
+            &created_date[4..6],
+            &created_date[6..8],
+            &created_date[8..10],
+            &created_date[10..12],
+            &created_date[12..14]
+        );
         html = html.replace("{{og_published_time}}", &og_published_time);
     } else {
         // For index or other pages without a creation date, use current time
@@ -1752,23 +1857,32 @@ fn generate_html_for_note(
     }
 
     // Format conditional date string
-    let formatted_date = if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
-        // Add OpenGraph modified time in ISO 8601 format
-        if note.Properties.updated.len() >= 14 {
-            let og_modified_time = format!("{}-{}-{}T{}:{}:{}Z",
-                &note.Properties.updated[0..4], &note.Properties.updated[4..6], &note.Properties.updated[6..8],
-                &note.Properties.updated[8..10], &note.Properties.updated[10..12], &note.Properties.updated[12..14]);
-            html = html.replace("{{#og_modified_time}}", "");
-            html = html.replace("{{/og_modified_time}}", "");
-            html = html.replace("{{og_modified_time}}", &og_modified_time);
-        }
+    let formatted_date =
+        if !note.Properties.updated.is_empty() && note.Properties.updated != created_date {
+            // Add OpenGraph modified time in ISO 8601 format
+            if note.Properties.updated.len() >= 14 {
+                let og_modified_time = format!(
+                    "{}-{}-{}T{}:{}:{}Z",
+                    &note.Properties.updated[0..4],
+                    &note.Properties.updated[4..6],
+                    &note.Properties.updated[6..8],
+                    &note.Properties.updated[8..10],
+                    &note.Properties.updated[10..12],
+                    &note.Properties.updated[12..14]
+                );
+                html = html.replace("{{#og_modified_time}}", "");
+                html = html.replace("{{/og_modified_time}}", "");
+                html = html.replace("{{og_modified_time}}", &og_modified_time);
+            }
 
-        format!("Created on {}, updated on {}",
-            naturalize_date(&created_date),
-            naturalize_date(&note.Properties.updated))
-    } else {
-        format!("Created on {}", naturalize_date(&created_date))
-    };
+            format!(
+                "Created on {}, updated on {}",
+                naturalize_date(&created_date),
+                naturalize_date(&note.Properties.updated)
+            )
+        } else {
+            format!("Created on {}", naturalize_date(&created_date))
+        };
     html = html.replace("{{last_updated_date}}", &formatted_date);
 
     html = html.replace("{{category}}", &note.Properties.note_type);
@@ -1776,7 +1890,10 @@ fn generate_html_for_note(
     html = html.replace("{{next_article_title}}", "");
 
     // Generate navigation items
-    let mut sorted_notes: Vec<_> = notes_map.values().filter(|n| !n.Properties.title.is_empty()).collect();
+    let mut sorted_notes: Vec<_> = notes_map
+        .values()
+        .filter(|n| !n.Properties.title.is_empty())
+        .collect();
     sorted_notes.sort_by(|a, b| a.Properties.title.cmp(&b.Properties.title));
 
     // Generate table of contents by extracting headings from the note content
@@ -1844,7 +1961,10 @@ fn generate_html_for_note(
         if !og_tags_html.is_empty() {
             html = html.replace("{{#og_tags}}", "");
             html = html.replace("{{/og_tags}}", "");
-            html = html.replace("<meta property=\"article:tag\" content=\"{{.}}\">", &og_tags_html);
+            html = html.replace(
+                "<meta property=\"article:tag\" content=\"{{.}}\">",
+                &og_tags_html,
+            );
         }
     } else {
         // Remove OpenGraph tags section if no tags
@@ -1862,7 +1982,10 @@ fn generate_html_for_note(
     html = html.replace("{{note_meta}}", &meta);
 
     // Set generation date
-    html = html.replace("{{generation_date}}", &Local::now().format("%Y-%m-%d %H:%M:%S").to_string());
+    html = html.replace(
+        "{{generation_date}}",
+        &Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+    );
 
     // All template variables should be handled appropriately above
 
@@ -1881,7 +2004,11 @@ fn generate_html_for_note(
     Ok(())
 }
 
-fn render_blocks_with_ids(blocks: &[Block], notes_map: &HashMap<String, Note>, id_to_path: &HashMap<String, PathBuf>) -> String {
+fn render_blocks_with_ids(
+    blocks: &[Block],
+    notes_map: &HashMap<String, Note>,
+    id_to_path: &HashMap<String, PathBuf>,
+) -> String {
     let mut id_counter = 0;
     let mut html = String::new();
 
@@ -1913,7 +2040,7 @@ fn render_blocks_with_ids(blocks: &[Block], notes_map: &HashMap<String, Note>, i
                 }
 
                 html.push_str(&format!("</h{}>\n", level));
-            },
+            }
             // For other block types, use the regular render_block function
             _ => {
                 html.push_str(&render_block(block, notes_map, id_to_path));
@@ -1933,9 +2060,12 @@ fn render_blocks(
 
     for block in blocks {
         match block.Type.as_str() {
-
             "NodeSuperBlock" => {
-                let layout_type = if let Some(layout_marker) = block.Children.iter().find(|child| child.Type == "NodeSuperBlockLayoutMarker") {
+                let layout_type = if let Some(layout_marker) = block
+                    .Children
+                    .iter()
+                    .find(|child| child.Type == "NodeSuperBlockLayoutMarker")
+                {
                     layout_marker.Data.as_str()
                 } else {
                     "row" // Default to column layout
@@ -1947,16 +2077,23 @@ fn render_blocks(
                 } else {
                     String::new()
                 };
-                html.push_str(&format!("<div{} class=\"superblock superblock-{}\">\n", id_attr, layout_type));
+                html.push_str(&format!(
+                    "<div{} class=\"superblock superblock-{}\">\n",
+                    id_attr, layout_type
+                ));
 
-                let content_blocks: Vec<&Block> = block.Children.iter()
-                    .filter(|child|
-                        child.Type != "NodeSuperBlockOpenMarker" &&
-                        child.Type != "NodeSuperBlockLayoutMarker" &&
-                        child.Type != "NodeSuperBlockCloseMarker")
+                let content_blocks: Vec<&Block> = block
+                    .Children
+                    .iter()
+                    .filter(|child| {
+                        child.Type != "NodeSuperBlockOpenMarker"
+                            && child.Type != "NodeSuperBlockLayoutMarker"
+                            && child.Type != "NodeSuperBlockCloseMarker"
+                    })
                     .collect();
 
-                let nested_superblocks: Vec<&Block> = content_blocks.iter()
+                let nested_superblocks: Vec<&Block> = content_blocks
+                    .iter()
                     .filter(|b| b.Type == "NodeSuperBlock")
                     .cloned()
                     .collect();
@@ -1966,7 +2103,8 @@ fn render_blocks(
                         html.push_str(&render_block(nested, notes_map, id_to_path));
                     }
 
-                    let other_blocks: Vec<&Block> = content_blocks.iter()
+                    let other_blocks: Vec<&Block> = content_blocks
+                        .iter()
                         .filter(|b| b.Type != "NodeSuperBlock")
                         .cloned()
                         .collect();
@@ -2002,22 +2140,23 @@ fn render_blocks(
                 }
 
                 html.push_str("</div>\n");
-            },
+            }
             "NodeParagraph" => {
                 let mut class_attr = String::new();
                 let mut style_attr = String::new();
 
                 // Check if paragraph has special styling
                 if !block.Properties.style.is_empty() {
-                    let (class_name_opt, keep_style) = get_style_class(&block.Properties.style, false);
-                    
+                    let (class_name_opt, keep_style) =
+                        get_style_class(&block.Properties.style, false);
+
                     let has_class = if let Some(ref class_name) = class_name_opt {
                         class_attr = format!(" class=\"{}\"", class_name);
                         true
                     } else {
                         false
                     };
-                    
+
                     // Keep the original style if needed
                     if keep_style || !has_class {
                         style_attr = format!(" style=\"{}\"", block.Properties.style);
@@ -2025,8 +2164,8 @@ fn render_blocks(
                 }
 
                 // Check if this paragraph contains only an image
-                let contains_only_image = block.Children.len() == 1 &&
-                    block.Children[0].Type == "NodeImage";
+                let contains_only_image =
+                    block.Children.len() == 1 && block.Children[0].Type == "NodeImage";
 
                 // Always output the paragraph with its styling, even for images
                 // This allows for centered or aligned images through paragraph styling
@@ -2038,7 +2177,7 @@ fn render_blocks(
                 html.push_str(&format!("<p{}{}{}>", id_attr, class_attr, style_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</p>\n");
-            },
+            }
             "NodeHeading" => {
                 let level = block.HeadingLevel.max(1).min(6);
                 let id = if !block.ID.is_empty() {
@@ -2049,7 +2188,7 @@ fn render_blocks(
                 html.push_str(&format!("<h{}{}>", level, id));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str(&format!("</h{}>\n", level));
-            },
+            }
             "NodeList" => {
                 // Determine if ordered or unordered list
                 let list_type = if let serde_json::Value::Object(map) = &block.ListData {
@@ -2090,7 +2229,7 @@ fn render_blocks(
                     "ordered" => html.push_str("</ol>\n"),
                     _ => html.push_str("</ul>\n"),
                 }
-            },
+            }
             "NodeListItem" => {
                 // Check if this is a task list item
                 let id_attr = if !block.ID.is_empty() {
@@ -2099,12 +2238,20 @@ fn render_blocks(
                     String::new()
                 };
 
-                if block.Children.iter().any(|child| child.Type == "NodeTaskListItemMarker") {
+                if block
+                    .Children
+                    .iter()
+                    .any(|child| child.Type == "NodeTaskListItemMarker")
+                {
                     // Make the list item properly positioned
                     html.push_str(&format!("<li{} style=\"position: relative; padding-left: 30px; margin-bottom: 12px; list-style: none; \">", id_attr));
 
                     // Check if the task is checked or unchecked
-                    if let Some(task_marker_block) = block.Children.iter().find(|child| child.Type == "NodeTaskListItemMarker") {
+                    if let Some(task_marker_block) = block
+                        .Children
+                        .iter()
+                        .find(|child| child.Type == "NodeTaskListItemMarker")
+                    {
                         if task_marker_block.TaskListItemChecked {
                             // Checked item
                             html.push_str("<span class=\"task-checkbox-checked\"></span>");
@@ -2136,7 +2283,11 @@ fn render_blocks(
                     for child in &block.Children {
                         if child.Type == "NodeParagraph" {
                             if last_was_paragraph {
-                                content.push_str(&render_blocks(&child.Children, notes_map, id_to_path));
+                                content.push_str(&render_blocks(
+                                    &child.Children,
+                                    notes_map,
+                                    id_to_path,
+                                ));
                             } else {
                                 content.push_str(&render_block(child, notes_map, id_to_path));
                                 last_was_paragraph = true;
@@ -2150,10 +2301,10 @@ fn render_blocks(
                     html.push_str(&content);
                 }
                 html.push_str("</li>\n");
-            },
+            }
             "NodeTaskListItemMarker" => {
                 // Skip rendering
-            },
+            }
             "NodeBlockquote" => {
                 let id_attr = if !block.ID.is_empty() {
                     format!(" id=\"{}\"", block.ID)
@@ -2163,7 +2314,7 @@ fn render_blocks(
                 html.push_str(&format!("<blockquote{}>", id_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</blockquote>\n");
-            },
+            }
             "NodeThematicBreak" => {
                 let id_attr = if !block.ID.is_empty() {
                     format!(" id=\"{}\"", block.ID)
@@ -2171,7 +2322,7 @@ fn render_blocks(
                     String::new()
                 };
                 html.push_str(&format!("<hr{}>\n", id_attr));
-            },
+            }
             "NodeTable" => {
                 let id_attr = if !block.ID.is_empty() {
                     format!(" id=\"{}\"", block.ID)
@@ -2181,7 +2332,7 @@ fn render_blocks(
                 html.push_str(&format!("<table{}>\n", id_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</table>\n");
-            },
+            }
             "NodeTableHead" => {
                 let id_attr = if !block.ID.is_empty() {
                     format!(" id=\"{}\"", block.ID)
@@ -2191,7 +2342,7 @@ fn render_blocks(
                 html.push_str(&format!("<thead{}>\n", id_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</thead>\n");
-            },
+            }
             "NodeTableRow" => {
                 let id_attr = if !block.ID.is_empty() {
                     format!(" id=\"{}\"", block.ID)
@@ -2201,7 +2352,7 @@ fn render_blocks(
                 html.push_str(&format!("<tr{}>\n", id_attr));
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 html.push_str("</tr>\n");
-            },
+            }
             "NodeTableCell" => {
                 let id_attr = if !block.ID.is_empty() {
                     format!(" id=\"{}\"", block.ID)
@@ -2217,7 +2368,7 @@ fn render_blocks(
                     html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                     html.push_str("</td>\n");
                 }
-            },
+            }
             "NodeCodeBlock" => {
                 let id_attr = if !block.ID.is_empty() {
                     format!(" id=\"{}\"", block.ID)
@@ -2248,7 +2399,7 @@ fn render_blocks(
                 }
 
                 html.push_str("</code></pre>\n");
-            },
+            }
             "NodeText" => {
                 // For text nodes, we generally don't add IDs as they're inline elements,
                 // but we can wrap them in a span with an ID if needed
@@ -2259,11 +2410,11 @@ fn render_blocks(
                 } else {
                     html.push_str(&escape_html(&block.Data));
                 }
-            },
+            }
             "NodeTextMark" => {
                 // Update this line to pass all required arguments
                 html.push_str(&render_text_mark(block, notes_map, id_to_path));
-            },
+            }
             "NodeImage" => {
                 // Handle image nodes
                 let mut image_src = String::new();
@@ -2323,9 +2474,7 @@ fn render_blocks(
                         // In this case, don't add the ID to the img tag since it's on the wrapper
                         html.push_str(&format!(
                             "<img src=\"{}\" alt=\"{}\"{}/>",
-                            image_src,
-                            alt_text,
-                            style_attr
+                            image_src, alt_text, style_attr
                         ));
 
                         // Close the parent div
@@ -2336,10 +2485,7 @@ fn render_blocks(
                         let img_id_attr = if has_caption { "" } else { &id_attr };
                         html.push_str(&format!(
                             "<img{} src=\"{}\" alt=\"{}\"{}/>",
-                            img_id_attr,
-                            image_src,
-                            alt_text,
-                            style_attr
+                            img_id_attr, image_src, alt_text, style_attr
                         ));
                     }
 
@@ -2354,7 +2500,7 @@ fn render_blocks(
                         html.push_str("</figure>");
                     }
                 }
-            },
+            }
             "NodeBr" => {
                 let id_attr = if !block.ID.is_empty() {
                     format!(" id=\"{}\"", block.ID)
@@ -2362,11 +2508,15 @@ fn render_blocks(
                     String::new()
                 };
                 html.push_str(&format!("<br{}>", id_attr));
-            },
+            }
             "NodeBlockQueryEmbed" => {
                 // Process block query embed (transclusion)
                 // First, find the NodeBlockQueryEmbedScript child that contains the query
-                if let Some(script_block) = block.Children.iter().find(|child| child.Type == "NodeBlockQueryEmbedScript") {
+                if let Some(script_block) = block
+                    .Children
+                    .iter()
+                    .find(|child| child.Type == "NodeBlockQueryEmbedScript")
+                {
                     // Extract the block ID from the query
                     // The query format is typically: "select * from blocks where id='BLOCK_ID'"
                     if let Some(id_start) = script_block.Data.find("id='") {
@@ -2380,7 +2530,10 @@ fn render_blocks(
                             } else {
                                 String::new()
                             };
-                            html.push_str(&format!("<div{} class=\"transcluded-block\">", wrapper_id));
+                            html.push_str(&format!(
+                                "<div{} class=\"transcluded-block\">",
+                                wrapper_id
+                            ));
 
                             // Add source link button
                             let source_url = if notes_map.contains_key(content_id) {
@@ -2397,15 +2550,24 @@ fn render_blocks(
                                 format!("{}.html#{}", source_note_id, content_id) // Link to the note with block ID anchor
                             };
 
-                            html.push_str(&format!("<a href=\"{}\" class=\"source-link\">Go to source</a>", source_url));
+                            html.push_str(&format!(
+                                "<a href=\"{}\" class=\"source-link\">Go to source</a>",
+                                source_url
+                            ));
 
                             // Check if this is a block ID or a note ID
                             let mut found = false;
 
                             // First try to find the specific block by ID
                             for note in notes_map.values() {
-                                if let Some(found_block) = find_block_by_id(content_id, &note.Children) {
-                                    html.push_str(&render_block(found_block, notes_map, id_to_path));
+                                if let Some(found_block) =
+                                    find_block_by_id(content_id, &note.Children)
+                                {
+                                    html.push_str(&render_block(
+                                        found_block,
+                                        notes_map,
+                                        id_to_path,
+                                    ));
                                     found = true;
                                     break;
                                 }
@@ -2415,13 +2577,20 @@ fn render_blocks(
                             if !found {
                                 if let Some(note) = notes_map.get(content_id) {
                                     // Render all blocks from the note
-                                    html.push_str(&render_blocks(&note.Children, notes_map, id_to_path));
+                                    html.push_str(&render_blocks(
+                                        &note.Children,
+                                        notes_map,
+                                        id_to_path,
+                                    ));
                                     found = true;
                                 }
                             }
 
                             if !found {
-                                html.push_str(&format!("<p><em>Transcluded content not found: {}</em></p>", content_id));
+                                html.push_str(&format!(
+                                    "<p><em>Transcluded content not found: {}</em></p>",
+                                    content_id
+                                ));
                                 // No need to remove the source link with CSS-based approach
                             }
 
@@ -2432,7 +2601,7 @@ fn render_blocks(
                     // Fallback - just render children
                     html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 }
-            },
+            }
             _ => {
                 // For unhandled node types, just render their children
                 html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
@@ -2443,7 +2612,11 @@ fn render_blocks(
     html
 }
 
-fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path: &HashMap<String, PathBuf>) -> String {
+fn render_text_mark(
+    block: &Block,
+    notes_map: &HashMap<String, Note>,
+    id_to_path: &HashMap<String, PathBuf>,
+) -> String {
     let mut html = String::new();
     let id_attr = if !block.ID.is_empty() {
         format!(" id=\"{}\"", block.ID)
@@ -2455,12 +2628,10 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
         "a" => {
             html.push_str(&format!(
                 "<a{} href=\"{}\" target=\"_blank\" class=\"link\">{}",
-                id_attr,
-                block.TextMarkAHref,
-                block.TextMarkTextContent
+                id_attr, block.TextMarkAHref, block.TextMarkTextContent
             ));
             html.push_str("</a>");
-        },
+        }
         "code" => {
             html.push_str(&format!(
                 "<code{}>{}",
@@ -2468,7 +2639,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</code>");
-        },
+        }
         "strong" | "strong text" => {
             // Handle both "strong" and "strong text" the same way
             let content = escape_html(&block.TextMarkTextContent);
@@ -2476,40 +2647,33 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
             // Check if there are style properties for special highlights
             if !block.Properties.style.is_empty() {
                 let (class_name_opt, keep_style) = get_style_class(&block.Properties.style, true);
-                
+
                 if let Some(ref class_name) = class_name_opt {
                     if keep_style {
                         // Apply both class and style
                         html.push_str(&format!(
                             "<strong{} class=\"{}\" style=\"{}\">{}",
-                            id_attr,
-                            class_name,
-                            block.Properties.style,
-                            content
+                            id_attr, class_name, block.Properties.style, content
                         ));
                     } else {
                         // Apply just the class
                         html.push_str(&format!(
                             "<strong{} class=\"{}\">{}",
-                            id_attr,
-                            class_name,
-                            content
+                            id_attr, class_name, content
                         ));
                     }
                 } else {
                     // Use inline style for custom colors
                     html.push_str(&format!(
                         "<strong{} style=\"{}\">{}",
-                        id_attr,
-                        block.Properties.style,
-                        content
+                        id_attr, block.Properties.style, content
                     ));
                 }
             } else {
                 html.push_str(&format!("<strong{}>{}", id_attr, content));
             }
             html.push_str("</strong>");
-        },
+        }
         "em" => {
             // Check if this is also a link (has a href)
             if !block.TextMarkAHref.is_empty() {
@@ -2528,7 +2692,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 ));
                 html.push_str("</em>");
             }
-        },
+        }
         "u" => {
             html.push_str(&format!(
                 "<u{}>{}",
@@ -2536,7 +2700,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</u>");
-        },
+        }
         "s" => {
             html.push_str(&format!(
                 "<s{}>{}",
@@ -2544,7 +2708,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</s>");
-        },
+        }
         text_type if text_type == "sub" || text_type.starts_with("sub ") => {
             let additional_format = if text_type.starts_with("sub ") {
                 &text_type[4..]
@@ -2571,11 +2735,14 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&title)
                     ));
                     html.push_str("</sub></a>");
-                    
+
                     // Add tooltip content
                     html.push_str("<span class=\"right bottom\">");
-                    html.push_str(&format!("<span class=\"tooltip-title\">{}</span>", escape_html(&ref_note.Properties.title)));
-                    
+                    html.push_str(&format!(
+                        "<span class=\"tooltip-title\">{}</span>",
+                        escape_html(&ref_note.Properties.title)
+                    ));
+
                     // Extract excerpt for tooltip
                     let mut excerpt = String::new();
                     let mut paragraph_count = 0;
@@ -2614,7 +2781,10 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         excerpt.push_str("...");
                     }
 
-                    html.push_str(&format!("<span class=\"tooltip-excerpt\">{}</span>", excerpt));
+                    html.push_str(&format!(
+                        "<span class=\"tooltip-excerpt\">{}</span>",
+                        excerpt
+                    ));
                     html.push_str("<i></i></span></span>");
                 } else {
                     html.push_str(&format!(
@@ -2670,7 +2840,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 html.push_str("</sub></mark>");
             } else if additional_format == "tag" {
                 html.push_str(&format!(
-                    "<a{} href=\"tag_{}.html\" class=\"tag\"><sub># {}",
+                    "<a{} href=\"tag_{}.html\" class=\"tag\"><sub>{}",
                     id_attr,
                     block.TextMarkTextContent.replace(" ", "_"),
                     block.TextMarkTextContent
@@ -2684,7 +2854,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 ));
                 html.push_str("</sub>");
             }
-        },
+        }
         text_type if text_type == "sup" || text_type.starts_with("sup ") => {
             let additional_format = if text_type.starts_with("sup ") {
                 &text_type[4..]
@@ -2712,11 +2882,14 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                             escape_html(&title)
                         ));
                         html.push_str("</sup></a>");
-                        
+
                         // Add tooltip content
                         html.push_str("<span class=\"right bottom\">");
-                        html.push_str(&format!("<span class=\"tooltip-title\">{}</span>", escape_html(&ref_note.Properties.title)));
-                        
+                        html.push_str(&format!(
+                            "<span class=\"tooltip-title\">{}</span>",
+                            escape_html(&ref_note.Properties.title)
+                        ));
+
                         // Extract excerpt for tooltip
                         let mut excerpt = String::new();
                         let mut paragraph_count = 0;
@@ -2755,7 +2928,10 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                             excerpt.push_str("...");
                         }
 
-                        html.push_str(&format!("<span class=\"tooltip-excerpt\">{}</span>", excerpt));
+                        html.push_str(&format!(
+                            "<span class=\"tooltip-excerpt\">{}</span>",
+                            excerpt
+                        ));
                         html.push_str("<i></i></span></span>");
                     } else {
                         html.push_str(&format!(
@@ -2766,7 +2942,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         ));
                         html.push_str("</sup></span>");
                     }
-                },
+                }
                 "a" => {
                     html.push_str(&format!(
                         "<a{} href=\"{}\" target=\"_blank\" class=\"link\"><sup>{}",
@@ -2775,7 +2951,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></a>");
-                },
+                }
                 "strong" | "strong text" => {
                     html.push_str(&format!(
                         "<strong{}><sup>{}",
@@ -2783,7 +2959,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></strong>");
-                },
+                }
                 "em" => {
                     html.push_str(&format!(
                         "<em{}><sup>{}",
@@ -2791,7 +2967,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></em>");
-                },
+                }
                 "u" => {
                     html.push_str(&format!(
                         "<u{}><sup>{}",
@@ -2799,7 +2975,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></u>");
-                },
+                }
                 "s" => {
                     html.push_str(&format!(
                         "<s{}><sup>{}",
@@ -2807,7 +2983,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></s>");
-                },
+                }
                 "mark" => {
                     html.push_str(&format!(
                         "<mark{}><sup>{}",
@@ -2815,16 +2991,16 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></mark>");
-                },
+                }
                 "tag" => {
                     html.push_str(&format!(
-                        "<a{} href=\"tag_{}.html\" class=\"tag\"><sup># {}",
+                        "<a{} href=\"tag_{}.html\" class=\"tag\"><sup>{}",
                         id_attr,
                         block.TextMarkTextContent.replace(" ", "_"),
                         block.TextMarkTextContent
                     ));
                     html.push_str("</sup></a>");
-                },
+                }
                 "" => {
                     html.push_str(&format!(
                         "<sup{}>{}",
@@ -2832,7 +3008,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup>");
-                },
+                }
                 _ => {
                     html.push_str(&format!(
                         "<sup{}>{}",
@@ -2842,7 +3018,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                     html.push_str("</sup>");
                 }
             }
-        },
+        }
         text_type if text_type == "sup" || text_type.starts_with("sup ") => {
             let additional_format = if text_type.starts_with("sup ") {
                 &text_type[4..]
@@ -2870,11 +3046,14 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                             escape_html(&title)
                         ));
                         html.push_str("</sup></a>");
-                        
+
                         // Add tooltip content
                         html.push_str("<span class=\"right bottom\">");
-                        html.push_str(&format!("<span class=\"tooltip-title\">{}</span>", escape_html(&ref_note.Properties.title)));
-                        
+                        html.push_str(&format!(
+                            "<span class=\"tooltip-title\">{}</span>",
+                            escape_html(&ref_note.Properties.title)
+                        ));
+
                         // Extract excerpt for tooltip
                         let mut excerpt = String::new();
                         let mut paragraph_count = 0;
@@ -2913,7 +3092,10 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                             excerpt.push_str("...");
                         }
 
-                        html.push_str(&format!("<span class=\"tooltip-excerpt\">{}</span>", excerpt));
+                        html.push_str(&format!(
+                            "<span class=\"tooltip-excerpt\">{}</span>",
+                            excerpt
+                        ));
                         html.push_str("<i></i></span></span>");
                     } else {
                         html.push_str(&format!(
@@ -2924,7 +3106,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         ));
                         html.push_str("</sup></span>");
                     }
-                },
+                }
                 "a" => {
                     html.push_str(&format!(
                         "<a{} href=\"{}\" target=\"_blank\" class=\"link\"><sup>{}",
@@ -2933,7 +3115,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></a>");
-                },
+                }
                 "strong" | "strong text" => {
                     html.push_str(&format!(
                         "<strong{}><sup>{}",
@@ -2941,7 +3123,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></strong>");
-                },
+                }
                 "em" => {
                     html.push_str(&format!(
                         "<em{}><sup>{}",
@@ -2949,7 +3131,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></em>");
-                },
+                }
                 "u" => {
                     html.push_str(&format!(
                         "<u{}><sup>{}",
@@ -2957,7 +3139,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></u>");
-                },
+                }
                 "s" => {
                     html.push_str(&format!(
                         "<s{}><sup>{}",
@@ -2965,7 +3147,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></s>");
-                },
+                }
                 "mark" => {
                     html.push_str(&format!(
                         "<mark{}><sup>{}",
@@ -2973,16 +3155,16 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup></mark>");
-                },
+                }
                 "tag" => {
                     html.push_str(&format!(
-                        "<a{} href=\"tag_{}.html\" class=\"tag\"><sup># {}",
+                        "<a{} href=\"tag_{}.html\" class=\"tag\"><sup>{}",
                         id_attr,
                         block.TextMarkTextContent.replace(" ", "_"),
                         block.TextMarkTextContent
                     ));
                     html.push_str("</sup></a>");
-                },
+                }
                 "" => {
                     html.push_str(&format!(
                         "<sup{}>{}",
@@ -2990,7 +3172,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         escape_html(&block.TextMarkTextContent)
                     ));
                     html.push_str("</sup>");
-                },
+                }
                 _ => {
                     html.push_str(&format!(
                         "<sup{}>{}",
@@ -3000,7 +3182,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                     html.push_str("</sup>");
                 }
             }
-        },
+        }
         "kbd" => {
             html.push_str(&format!(
                 "<kbd{}>{}",
@@ -3008,7 +3190,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</kbd>");
-        },
+        }
         "mark" => {
             html.push_str(&format!(
                 "<mark{}>{}",
@@ -3016,16 +3198,24 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</mark>");
-        },
+        }
         "text" | "text strong" => {
             // Check if there are style properties for special highlights
             if !block.Properties.style.is_empty() {
                 let content = escape_html(&block.TextMarkTextContent);
-                let tag_open = if block.TextMarkType == "text strong" { "<strong" } else { "<span" };
-                let tag_close = if block.TextMarkType == "text strong" { "</strong>" } else { "</span>" };
+                let tag_open = if block.TextMarkType == "text strong" {
+                    "<strong"
+                } else {
+                    "<span"
+                };
+                let tag_close = if block.TextMarkType == "text strong" {
+                    "</strong>"
+                } else {
+                    "</span>"
+                };
 
                 let (class_name_opt, keep_style) = get_style_class(&block.Properties.style, true);
-                
+
                 if let Some(ref class_name) = class_name_opt {
                     if keep_style {
                         // Apply both class and style
@@ -3042,36 +3232,28 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                         // Apply just the class
                         html.push_str(&format!(
                             "{}{} class=\"{}\">{}{}",
-                            tag_open,
-                            id_attr,
-                            class_name,
-                            content,
-                            tag_close
+                            tag_open, id_attr, class_name, content, tag_close
                         ));
                     }
                 } else {
                     html.push_str(&format!(
                         "{}{} style=\"{}\">{}{}",
-                        tag_open,
-                        id_attr,
-                        block.Properties.style,
-                        content,
-                        tag_close
+                        tag_open, id_attr, block.Properties.style, content, tag_close
                     ));
                 }
             } else {
                 html.push_str(&escape_html(&block.TextMarkTextContent));
             }
-        },
+        }
         "tag" => {
             html.push_str(&format!(
-                "<a{} href=\"tag_{}.html\" class=\"tag\"># {}",
+                "<a{} href=\"tag_{}.html\" class=\"tag\">{}",
                 id_attr,
                 block.TextMarkTextContent.replace(" ", "_"),
                 block.TextMarkTextContent
             ));
             html.push_str("</a>");
-        },
+        }
         "inline-math" => {
             // Just preserve the math content in a specially styled span
             html.push_str(&format!(
@@ -3081,15 +3263,26 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
             ));
         }
         "inline-memo" => {
-            // Use HTML title attribute for inline memos
+            // Use rich tooltips similar to block references for inline memos
             html.push_str(&format!(
-                "<span{} title=\"{}\">{}",
-                id_attr,
-                escape_html(&block.TextMarkInlineMemoContent),
+                "<span{} class=\"tooltip memo-highlight\">",
+                id_attr
+            ));
+            html.push_str(&format!(
+                "<span class=\"memo-text\">{}",
                 escape_html(&block.TextMarkTextContent)
             ));
             html.push_str("</span>");
-        },
+
+            // Add tooltip content
+            html.push_str("<span class=\"right bottom\">");
+            html.push_str("<span class=\"tooltip-title\">Memo</span>");
+            html.push_str(&format!(
+                "<span class=\"tooltip-excerpt\">{}</span>",
+                escape_html(&block.TextMarkInlineMemoContent)
+            ));
+            html.push_str("<i></i></span></span>");
+        }
         "block-ref" => {
             if notes_map.contains_key(&block.TextMarkBlockRefID) {
                 let ref_note = &notes_map[&block.TextMarkBlockRefID];
@@ -3150,8 +3343,14 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 ));
                 html.push_str("</a>");
                 html.push_str("<span class=\"right bottom\">");
-                html.push_str(&format!("<span class=\"tooltip-title\">{}</span>", escape_html(&ref_note.Properties.title)));
-                html.push_str(&format!("<span class=\"tooltip-excerpt\">{}</span>", excerpt));
+                html.push_str(&format!(
+                    "<span class=\"tooltip-title\">{}</span>",
+                    escape_html(&ref_note.Properties.title)
+                ));
+                html.push_str(&format!(
+                    "<span class=\"tooltip-excerpt\">{}</span>",
+                    excerpt
+                ));
                 html.push_str("<i></i></span></span>");
             } else {
                 html.push_str(&format!(
@@ -3162,7 +3361,7 @@ fn render_text_mark(block: &Block, notes_map: &HashMap<String, Note>, id_to_path
                 ));
                 html.push_str("</span>");
             }
-        },
+        }
         _ => {
             html.push_str(&escape_html(&block.TextMarkTextContent));
         }
@@ -3199,9 +3398,9 @@ fn comment_processor(html: &str) -> String {
                         in_style = false;
                     }
                 }
-            },
+            }
             '>' => {
-                if in_comment && i > 2 && &html[i-2..=i] == "-->" {
+                if in_comment && i > 2 && &html[i - 2..=i] == "-->" {
                     in_comment = false;
                     in_tag = false;
                 } else if in_tag && !in_comment {
@@ -3213,15 +3412,14 @@ fn comment_processor(html: &str) -> String {
                         // Opening tag increases depth
                         if !tag_content.starts_with("</") && !tag_content.ends_with("/>") {
                             depth += 1;
-                        }
-                        else if tag_content.starts_with("</") {
+                        } else if tag_content.starts_with("</") {
                             if depth > 0 {
                                 depth -= 1;
                             }
                         }
                     }
                 }
-            },
+            }
             _ => {}
         }
 
@@ -3237,7 +3435,8 @@ fn comment_processor(html: &str) -> String {
     }
 
     if total_points > 0 {
-        let mid_section: Vec<(usize, usize)> = insertion_points.iter()
+        let mid_section: Vec<(usize, usize)> = insertion_points
+            .iter()
             .filter(|(pos, d)| {
                 let pos_ratio = *pos as f64 / html.len() as f64;
                 *d >= 3 && pos_ratio >= 0.2 && pos_ratio <= 0.8
@@ -3245,7 +3444,8 @@ fn comment_processor(html: &str) -> String {
             .cloned()
             .collect();
 
-        let weighted_points: Vec<(usize, usize)> = mid_section.iter()
+        let weighted_points: Vec<(usize, usize)> = mid_section
+            .iter()
             .flat_map(|(pos, d)| {
                 let weight = d * d; // Square the depth to increase probability for deeper points
                 std::iter::repeat((*pos, *d)).take(weight)
@@ -3260,7 +3460,7 @@ fn comment_processor(html: &str) -> String {
             let mut result = String::with_capacity(html.len() + COMMENT.len());
             result.push_str(&html[..=insertion_point]);
             result.push_str(COMMENT);
-            result.push_str(&html[insertion_point+1..]);
+            result.push_str(&html[insertion_point + 1..]);
             return result;
         }
     }
@@ -3292,10 +3492,7 @@ fn find_block_by_id<'a>(block_id: &str, blocks: &'a [Block]) -> Option<&'a Block
 }
 
 // This function handles finding a block by ID, or an entire note by ID if the block isn't found
-fn find_content_by_id<'a>(
-    id: &str,
-    notes_map: &'a HashMap<String, Note>,
-) -> Option<&'a [Block]> {
+fn find_content_by_id<'a>(id: &str, notes_map: &'a HashMap<String, Note>) -> Option<&'a [Block]> {
     // First, check if this is a note ID
     if let Some(note) = notes_map.get(id) {
         // If it's a note ID, return all its top-level blocks
@@ -3338,15 +3535,20 @@ fn remove_zero_width_spaces(html: &str) -> String {
     let mut chars = html.chars().peekable();
 
     while let Some(c) = chars.next() {
-        if c == '\u{200B}' || c == '\u{200C}' || c == '\u{2060}' || c == '\u{200E}' || c == '\u{200F}' {
+        if c == '\u{200B}'
+            || c == '\u{200C}'
+            || c == '\u{2060}'
+            || c == '\u{200E}'
+            || c == '\u{200F}'
+        {
             continue;
         }
 
-        let is_emoji_start = c >= '\u{1F000}' && c <= '\u{1FFFF}' ||
-                             c >= '\u{2600}' && c <= '\u{27BF}' ||
-                             c >= '\u{2300}' && c <= '\u{23FF}' ||
-                             c >= '\u{2700}' && c <= '\u{27FF}' ||
-                             c >= '\u{1F1E6}' && c <= '\u{1F1FF}';
+        let is_emoji_start = c >= '\u{1F000}' && c <= '\u{1FFFF}'
+            || c >= '\u{2600}' && c <= '\u{27BF}'
+            || c >= '\u{2300}' && c <= '\u{23FF}'
+            || c >= '\u{2700}' && c <= '\u{27FF}'
+            || c >= '\u{1F1E6}' && c <= '\u{1F1FF}';
 
         result.push(c);
 
@@ -3360,7 +3562,9 @@ fn remove_zero_width_spaces(html: &str) -> String {
                         result.push(emoji_part);
 
                         while let Some(&modifier) = chars.peek() {
-                            if (modifier >= '\u{1F3FB}' && modifier <= '\u{1F3FF}') || modifier == '\u{FE0F}' {
+                            if (modifier >= '\u{1F3FB}' && modifier <= '\u{1F3FF}')
+                                || modifier == '\u{FE0F}'
+                            {
                                 result.push(modifier);
                                 chars.next();
                             } else {
@@ -3412,13 +3616,12 @@ fn cleanup_template_variables(html: &str) -> String {
 
     for line in lines {
         let trimmed = line.trim();
-        if !(
-            (trimmed.starts_with("<meta property=\"og:") ||
-             trimmed.starts_with("<meta property=\"article:")) &&
-            (trimmed.contains("content=\"\"") ||
-             trimmed.contains("content=\"{{") ||
-             trimmed.contains("content=\"\">"))
-        ) {
+        if !((trimmed.starts_with("<meta property=\"og:")
+            || trimmed.starts_with("<meta property=\"article:"))
+            && (trimmed.contains("content=\"\"")
+                || trimmed.contains("content=\"{{")
+                || trimmed.contains("content=\"\">")))
+        {
             cleaned_html.push_str(line);
             cleaned_html.push('\n');
         }
