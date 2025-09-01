@@ -1108,7 +1108,13 @@ a {
 
 /* Make nested superblocks take full width of their container */
 .superblock .superblock {
+    margin-top: 10px;
     margin-bottom: 10px;
+}
+
+/* First superblock in content doesn't need top margin */
+.article-content > .superblock:first-child {
+    margin-top: 0;
 }
 
 /* Heading and paragraph spacing within superblocks */

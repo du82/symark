@@ -1108,12 +1108,8 @@ a {
 
 /* Make nested superblocks take full width of their container */
 .superblock .superblock {
+    margin-top: 10px;
     margin-bottom: 10px;
-}
-
-/* Add spacing above superblocks */
-.superblock {
-    margin-top: 20px;
 }
 
 /* First superblock in content doesn't need top margin */
