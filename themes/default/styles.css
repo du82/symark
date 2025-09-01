@@ -1111,6 +1111,16 @@ a {
     margin-bottom: 10px;
 }
 
+/* Add spacing above superblocks */
+.superblock {
+    margin-top: 20px;
+}
+
+/* First superblock in content doesn't need top margin */
+.article-content > .superblock:first-child {
+    margin-top: 0;
+}
+
 /* Heading and paragraph spacing within superblocks */
 .superblock h2,
 .superblock h3,
