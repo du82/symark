@@ -165,17 +165,20 @@ struct TocItem {
     level: u8,
 }
 
-// Structure to track transclusions
+// Structure to track margin info numbers (transclusions and linked mentions)
 #[derive(Debug, Default)]
-struct TransclusionTracker {
+struct MarginInfoTracker {
     // Maps content_id -> set of (source_note_id, source_note_title) that transclude it
     transclusions: HashMap<String, HashSet<(String, String)>>,
+    // Maps content_id -> set of (source_note_id, source_note_title) that link to it
+    linked_mentions: HashMap<String, HashSet<(String, String)>>,
 }
 
-impl TransclusionTracker {
+impl MarginInfoTracker {
     fn new() -> Self {
         Self {
             transclusions: HashMap::new(),
+            linked_mentions: HashMap::new(),
         }
     }
 
@@ -191,8 +194,24 @@ impl TransclusionTracker {
             .insert((source_note_id.to_string(), source_note_title.to_string()));
     }
 
+    fn add_linked_mention(
+        &mut self,
+        content_id: &str,
+        source_note_id: &str,
+        source_note_title: &str,
+    ) {
+        self.linked_mentions
+            .entry(content_id.to_string())
+            .or_insert_with(HashSet::new)
+            .insert((source_note_id.to_string(), source_note_title.to_string()));
+    }
+
     fn get_transclusions(&self, content_id: &str) -> Option<&HashSet<(String, String)>> {
         self.transclusions.get(content_id)
+    }
+
+    fn get_linked_mentions(&self, content_id: &str) -> Option<&HashSet<(String, String)>> {
+        self.linked_mentions.get(content_id)
     }
 
     fn get_transclusion_count(&self, content_id: &str) -> usize {
@@ -200,15 +219,29 @@ impl TransclusionTracker {
             .get(content_id)
             .map_or(0, |set| set.len())
     }
+
+    fn get_linked_mention_count(&self, content_id: &str) -> usize {
+        self.linked_mentions
+            .get(content_id)
+            .map_or(0, |set| set.len())
+    }
+
+    fn format_count(count: usize) -> String {
+        if count > 99 {
+            "99+".to_string()
+        } else {
+            count.to_string()
+        }
+    }
 }
 
-// Function to collect all transclusions from notes
-fn collect_transclusions(notes_map: &HashMap<String, Note>) -> TransclusionTracker {
-    let mut tracker = TransclusionTracker::new();
+// Function to collect all margin info (transclusions and linked mentions) from notes
+fn collect_margin_info(notes_map: &HashMap<String, Note>) -> MarginInfoTracker {
+    let mut tracker = MarginInfoTracker::new();
 
     for (source_note_id, note) in notes_map {
         let source_note_title = &note.Properties.title;
-        collect_transclusions_from_blocks(
+        collect_info_from_blocks(
             &note.Children,
             &mut tracker,
             source_note_id,
@@ -219,10 +252,10 @@ fn collect_transclusions(notes_map: &HashMap<String, Note>) -> TransclusionTrack
     tracker
 }
 
-// Helper function to recursively collect transclusions from blocks
-fn collect_transclusions_from_blocks(
+// Helper function to recursively collect margin info from blocks
+fn collect_info_from_blocks(
     blocks: &[Block],
-    tracker: &mut TransclusionTracker,
+    tracker: &mut MarginInfoTracker,
     source_note_id: &str,
     source_note_title: &str,
 ) {
@@ -245,15 +278,34 @@ fn collect_transclusions_from_blocks(
             }
         }
 
+        // Check for block references (linked mentions) in text marks
+        collect_text_marks_for_mentions(block, tracker, source_note_id, source_note_title);
+
         // Recursively check children
         if !block.Children.is_empty() {
-            collect_transclusions_from_blocks(
-                &block.Children,
-                tracker,
-                source_note_id,
-                source_note_title,
-            );
+            collect_info_from_blocks(&block.Children, tracker, source_note_id, source_note_title);
         }
+    }
+}
+
+// Helper function to recursively collect linked mentions from text marks
+fn collect_text_marks_for_mentions(
+    block: &Block,
+    tracker: &mut MarginInfoTracker,
+    source_note_id: &str,
+    source_note_title: &str,
+) {
+    // Check current block for block references
+    if block.Type == "NodeTextMark" && block.TextMarkType == "block-ref" {
+        let content_id = &block.TextMarkBlockRefID;
+        if !content_id.is_empty() {
+            tracker.add_linked_mention(content_id, source_note_id, source_note_title);
+        }
+    }
+
+    // Recursively check children for nested text marks
+    for child in &block.Children {
+        collect_text_marks_for_mentions(child, tracker, source_note_id, source_note_title);
     }
 }
 
@@ -610,9 +662,9 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    // Collect transclusions first
-    println!("Collecting transclusions...");
-    let transclusion_tracker = collect_transclusions(&notes_map);
+    // Collect margin info (transclusions and linked mentions)
+    println!("Collecting margin info...");
+    let margin_info_tracker = collect_margin_info(&notes_map);
 
     println!("Reading HTML template...");
     let html_template_path = format!("themes/{}/page.html", theme_name);
@@ -628,7 +680,7 @@ fn main() -> std::io::Result<()> {
             &output_dir,
             &all_tags,
             &html_template,
-            &transclusion_tracker,
+            &margin_info_tracker,
         )?;
         page_count += 1;
 
@@ -649,7 +701,7 @@ fn main() -> std::io::Result<()> {
             &output_dir,
             &all_tags,
             &html_template,
-            &transclusion_tracker,
+            &margin_info_tracker,
         )?;
         page_count += 1;
     }
@@ -770,7 +822,7 @@ fn generate_custom_index_page(
     output_dir: &Path,
     all_tags: &HashSet<String>,
     html_template: &str,
-    transclusion_tracker: &TransclusionTracker,
+    margin_info_tracker: &MarginInfoTracker,
 ) -> std::io::Result<()> {
     let note = &notes_map[index_id];
     let title = if !note.Properties.title.is_empty() {
@@ -811,7 +863,7 @@ fn generate_custom_index_page(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 false,
             );
 
@@ -971,17 +1023,18 @@ fn generate_custom_index_page(
     let toc_html = generate_toc_html(&toc_items);
     html = html.replace("{{table_of_contents}}", &toc_html);
 
-    let content = render_blocks_with_ids(
+    // Generate content with heading IDs for TOC
+    let content_html = render_blocks_with_ids(
         &note.Children,
         notes_map,
         id_to_path,
-        transclusion_tracker,
+        margin_info_tracker,
         false,
     );
 
     let content_with_link = format!(
         "{}\n<div class=\"all-notes-link\"><a href=\"all.html\">View All Notes</a></div>",
-        content
+        content_html
     );
 
     html = html.replace("{{content}}", &content_with_link);
@@ -1796,7 +1849,7 @@ fn generate_html_for_note(
     output_dir: &Path,
     all_tags: &HashSet<String>,
     html_template: &str,
-    transclusion_tracker: &TransclusionTracker,
+    margin_info_tracker: &MarginInfoTracker,
 ) -> std::io::Result<()> {
     println!("Generating HTML for note ID: {}", id);
     let note = &notes_map[id];
@@ -1839,7 +1892,7 @@ fn generate_html_for_note(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 false,
             );
 
@@ -2031,7 +2084,7 @@ fn generate_html_for_note(
         &note.Children,
         notes_map,
         id_to_path,
-        transclusion_tracker,
+        margin_info_tracker,
         false,
     );
     html = html.replace("{{content}}", &content_html);
@@ -2132,7 +2185,7 @@ fn render_blocks_with_ids(
     blocks: &[Block],
     notes_map: &HashMap<String, Note>,
     id_to_path: &HashMap<String, PathBuf>,
-    transclusion_tracker: &TransclusionTracker,
+    margin_info_tracker: &MarginInfoTracker,
     is_in_transclusion: bool,
 ) -> String {
     let mut id_counter = 0;
@@ -2165,7 +2218,7 @@ fn render_blocks_with_ids(
                             child,
                             notes_map,
                             id_to_path,
-                            transclusion_tracker,
+                            margin_info_tracker,
                             is_in_transclusion,
                         ));
                     }
@@ -2179,7 +2232,7 @@ fn render_blocks_with_ids(
                     block,
                     notes_map,
                     id_to_path,
-                    transclusion_tracker,
+                    margin_info_tracker,
                     is_in_transclusion,
                 ));
             }
@@ -2222,7 +2275,7 @@ fn render_blocks(
     blocks: &[Block],
     notes_map: &HashMap<String, Note>,
     id_to_path: &HashMap<String, PathBuf>,
-    transclusion_tracker: &TransclusionTracker,
+    margin_info_tracker: &MarginInfoTracker,
     is_in_transclusion: bool,
 ) -> String {
     let mut html = String::new();
@@ -2233,44 +2286,89 @@ fn render_blocks(
             block,
             notes_map,
             id_to_path,
-            transclusion_tracker,
+            margin_info_tracker,
             is_in_transclusion,
         );
 
         // Add transcluded indicator if needed (only in original context)
-        if !is_in_transclusion
-            && !block.ID.is_empty()
-            && transclusion_tracker.get_transclusion_count(&block.ID) > 0
-        {
-            let transclusion_count = transclusion_tracker.get_transclusion_count(&block.ID);
-            let tooltip_content =
-                if let Some(transclusions) = transclusion_tracker.get_transclusions(&block.ID) {
-                    transclusions
-                        .iter()
-                        .map(|(note_id, note_title)| {
-                            format!(r#"<a href="{}.html">{}</a>"#, note_id, note_title)
-                        })
-                        .collect::<Vec<_>>()
-                        .join("<br>")
-                } else {
-                    String::new()
-                };
+        // Check for margin info indicators (transcluded references and linked mentions)
+        let transclusion_count = if !is_in_transclusion && !block.ID.is_empty() {
+            margin_info_tracker.get_transclusion_count(&block.ID)
+        } else {
+            0
+        };
 
-            let indicator_html = format!(
-                r#"<span class="transcluded-indicator" data-count="{}">
-                    <span class="transcluded-count">{}</span>
-                    <span class="transcluded-tooltip">
-                        <span class="transcluded-tooltip-title">Transcluded in:</span>
-                        <span class="transcluded-tooltip-content">{}</span>
-                    </span>
-                </span>"#,
-                transclusion_count, transclusion_count, tooltip_content
-            );
+        let linked_mention_count = if !is_in_transclusion && !block.ID.is_empty() {
+            margin_info_tracker.get_linked_mention_count(&block.ID)
+        } else {
+            0
+        };
 
-            // Wrap the block with a positioning container and add the indicator
+        if transclusion_count > 0 || linked_mention_count > 0 {
+            let mut indicators_html = String::new();
+
+            // Add transcluded indicator
+            if transclusion_count > 0 {
+                let tooltip_content =
+                    if let Some(transclusions) = margin_info_tracker.get_transclusions(&block.ID) {
+                        transclusions
+                            .iter()
+                            .map(|(note_id, note_title)| {
+                                format!(r#"<a href="{}.html">{}</a>"#, note_id, note_title)
+                            })
+                            .collect::<Vec<_>>()
+                            .join("<br>")
+                    } else {
+                        String::new()
+                    };
+
+                indicators_html.push_str(&format!(
+                    r#"<span class="margin-infonumber transcluded" data-count="{}">
+                        <span class="margin-infonumber-count">{}</span>
+                        <span class="margin-infonumber-tooltip">
+                            <span class="margin-infonumber-tooltip-title">Transcluded in:</span>
+                            <span class="margin-infonumber-tooltip-content">{}</span>
+                        </span>
+                    </span>"#,
+                    transclusion_count,
+                    MarginInfoTracker::format_count(transclusion_count),
+                    tooltip_content
+                ));
+            }
+
+            // Add linked mentions indicator
+            if linked_mention_count > 0 {
+                let tooltip_content =
+                    if let Some(mentions) = margin_info_tracker.get_linked_mentions(&block.ID) {
+                        mentions
+                            .iter()
+                            .map(|(note_id, note_title)| {
+                                format!(r#"<a href="{}.html">{}</a>"#, note_id, note_title)
+                            })
+                            .collect::<Vec<_>>()
+                            .join("<br>")
+                    } else {
+                        String::new()
+                    };
+
+                indicators_html.push_str(&format!(
+                    r#"<span class="margin-infonumber linked" data-count="{}">
+                        <span class="margin-infonumber-count">{}</span>
+                        <span class="margin-infonumber-tooltip">
+                            <span class="margin-infonumber-tooltip-title">Linked mentions:</span>
+                            <span class="margin-infonumber-tooltip-content">{}</span>
+                        </span>
+                    </span>"#,
+                    linked_mention_count,
+                    MarginInfoTracker::format_count(linked_mention_count),
+                    tooltip_content
+                ));
+            }
+
+            // Wrap the block with a positioning container and add the indicators
             html.push_str(&format!(
                 r#"<div class="block-with-indicator">{}{}</div>"#,
-                block_html, indicator_html
+                block_html, indicators_html
             ));
         } else {
             html.push_str(&block_html);
@@ -2284,7 +2382,7 @@ fn render_single_block(
     block: &Block,
     notes_map: &HashMap<String, Note>,
     id_to_path: &HashMap<String, PathBuf>,
-    transclusion_tracker: &TransclusionTracker,
+    margin_info_tracker: &MarginInfoTracker,
     is_in_transclusion: bool,
 ) -> String {
     let mut html = String::new();
@@ -2334,7 +2432,7 @@ fn render_single_block(
                         nested,
                         notes_map,
                         id_to_path,
-                        transclusion_tracker,
+                        margin_info_tracker,
                         is_in_transclusion,
                     ));
                 }
@@ -2354,7 +2452,7 @@ fn render_single_block(
                             block,
                             notes_map,
                             id_to_path,
-                            transclusion_tracker,
+                            margin_info_tracker,
                             is_in_transclusion,
                         ));
                     }
@@ -2372,7 +2470,7 @@ fn render_single_block(
                             content_blocks[0],
                             notes_map,
                             id_to_path,
-                            transclusion_tracker,
+                            margin_info_tracker,
                             is_in_transclusion,
                         ));
                         html.push_str("</div>\n");
@@ -2381,7 +2479,7 @@ fn render_single_block(
                             content_blocks[1],
                             notes_map,
                             id_to_path,
-                            transclusion_tracker,
+                            margin_info_tracker,
                             is_in_transclusion,
                         ));
                         html.push_str("</div>\n");
@@ -2394,7 +2492,7 @@ fn render_single_block(
                                     block,
                                     notes_map,
                                     id_to_path,
-                                    transclusion_tracker,
+                                    margin_info_tracker,
                                     is_in_transclusion,
                                 ));
                             }
@@ -2408,7 +2506,7 @@ fn render_single_block(
                             block,
                             notes_map,
                             id_to_path,
-                            transclusion_tracker,
+                            margin_info_tracker,
                             is_in_transclusion,
                         ));
                     }
@@ -2454,7 +2552,7 @@ fn render_single_block(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 is_in_transclusion,
             ));
             html.push_str("</p>\n");
@@ -2471,7 +2569,7 @@ fn render_single_block(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 is_in_transclusion,
             ));
             html.push_str(&format!("</h{}>\n", level));
@@ -2514,7 +2612,7 @@ fn render_single_block(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 is_in_transclusion,
             ));
 
@@ -2557,7 +2655,7 @@ fn render_single_block(
                                     child,
                                     notes_map,
                                     id_to_path,
-                                    transclusion_tracker,
+                                    margin_info_tracker,
                                     is_in_transclusion,
                                 ));
                             }
@@ -2572,7 +2670,7 @@ fn render_single_block(
                                     child,
                                     notes_map,
                                     id_to_path,
-                                    transclusion_tracker,
+                                    margin_info_tracker,
                                     is_in_transclusion,
                                 ));
                             }
@@ -2592,7 +2690,7 @@ fn render_single_block(
                                 &child.Children,
                                 notes_map,
                                 id_to_path,
-                                transclusion_tracker,
+                                margin_info_tracker,
                                 is_in_transclusion,
                             ));
                         } else {
@@ -2600,7 +2698,7 @@ fn render_single_block(
                                 child,
                                 notes_map,
                                 id_to_path,
-                                transclusion_tracker,
+                                margin_info_tracker,
                                 is_in_transclusion,
                             ));
                             last_was_paragraph = true;
@@ -2610,7 +2708,7 @@ fn render_single_block(
                             child,
                             notes_map,
                             id_to_path,
-                            transclusion_tracker,
+                            margin_info_tracker,
                             is_in_transclusion,
                         ));
                         last_was_paragraph = false;
@@ -2635,7 +2733,7 @@ fn render_single_block(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 is_in_transclusion,
             ));
             html.push_str("</blockquote>\n");
@@ -2659,7 +2757,7 @@ fn render_single_block(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 is_in_transclusion,
             ));
             html.push_str("</table>\n");
@@ -2675,7 +2773,7 @@ fn render_single_block(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 is_in_transclusion,
             ));
             html.push_str("</thead>\n");
@@ -2691,7 +2789,7 @@ fn render_single_block(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 is_in_transclusion,
             ));
             html.push_str("</tr>\n");
@@ -2708,7 +2806,7 @@ fn render_single_block(
                     &block.Children,
                     notes_map,
                     id_to_path,
-                    transclusion_tracker,
+                    margin_info_tracker,
                     is_in_transclusion,
                 ));
                 html.push_str("</th>\n");
@@ -2718,7 +2816,7 @@ fn render_single_block(
                     &block.Children,
                     notes_map,
                     id_to_path,
-                    transclusion_tracker,
+                    margin_info_tracker,
                     is_in_transclusion,
                 ));
                 html.push_str("</td>\n");
@@ -2918,7 +3016,7 @@ fn render_single_block(
                                     found_block,
                                     notes_map,
                                     id_to_path,
-                                    transclusion_tracker,
+                                    margin_info_tracker,
                                     true, // This is inside a transclusion
                                 ));
                                 found = true;
@@ -2934,7 +3032,7 @@ fn render_single_block(
                                     &note.Children,
                                     notes_map,
                                     id_to_path,
-                                    transclusion_tracker,
+                                    margin_info_tracker,
                                     true, // This is inside a transclusion
                                 ));
                                 found = true;
@@ -2958,7 +3056,7 @@ fn render_single_block(
                     &block.Children,
                     notes_map,
                     id_to_path,
-                    transclusion_tracker,
+                    margin_info_tracker,
                     is_in_transclusion,
                 ));
             }
@@ -2969,7 +3067,7 @@ fn render_single_block(
                 &block.Children,
                 notes_map,
                 id_to_path,
-                transclusion_tracker,
+                margin_info_tracker,
                 is_in_transclusion,
             ));
         }
@@ -3882,14 +3980,14 @@ fn render_block(
     block: &Block,
     notes_map: &HashMap<String, Note>,
     id_to_path: &HashMap<String, PathBuf>,
-    transclusion_tracker: &TransclusionTracker,
+    margin_info_tracker: &MarginInfoTracker,
     is_in_transclusion: bool,
 ) -> String {
     render_blocks(
         std::slice::from_ref(block),
         notes_map,
         id_to_path,
-        transclusion_tracker,
+        margin_info_tracker,
         is_in_transclusion,
     )
 }
