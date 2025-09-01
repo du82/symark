@@ -1262,26 +1262,25 @@ a {
 }
 
 .tooltip .right {
-    min-width: 300px;
-    max-width: 400px;
-    top: 50%;
-    left: 100%;
-    margin-left: 10px;
-    transform: translate(0, -50%);
-    padding: 10px 16px;
-    color: var(--primary-text-color);
-    background-color: var(--primary-bg-color);
+    min-width: 200px;
+    max-width: 500px;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 12px;
+    color: white;
+    background: #333;
     font-weight: normal;
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1.5;
     border-radius: 6px;
     position: absolute;
-    z-index: 99999999;
+    z-index: 1000;
     box-sizing: border-box;
-    box-shadow: 0 2px 12px var(--primary-box-shadow-color);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     display: none;
-    border: 1px solid var(--border-color);
     letter-spacing: 0.01em;
+    white-space: normal;
 }
 
 .tooltip:hover .right {
@@ -1298,46 +1297,35 @@ a {
     }
 }
 
-.tooltip .right i {
-    position: absolute;
-    top: 50%;
-    right: 100%;
-    margin-top: -12px;
-    width: 12px;
-    height: 24px;
-    overflow: hidden;
-}
-
-.tooltip .right i::after {
+.tooltip .right::before {
     content: "";
     position: absolute;
-    width: 12px;
-    height: 12px;
-    left: 0;
-    top: 50%;
-    transform: translate(50%, -50%) rotate(-45deg);
-    background-color: var(--primary-bg-color);
-    box-shadow: 0 1px 8px var(--primary-box-shadow-color);
-    border-left: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid #333;
+}
+
+.tooltip .right i {
+    display: none;
 }
 
 .right .tooltip-title {
-    font-size: 16px;
-    font-weight: 600;
+    font-weight: bold;
     display: block;
     margin-bottom: 4px;
-    color: var(--text-color);
+    color: white;
     line-height: 1.4;
+    border-bottom: 1px solid #555;
+    padding-bottom: 4px;
 }
 
 .right .tooltip-excerpt {
-    font-size: 14px;
     display: block;
-    color: var(--text-secondary);
+    color: white;
     line-height: 1.5;
-    max-height: 200px;
-    overflow-y: auto;
     margin-top: 0;
 }
 
@@ -1353,8 +1341,13 @@ a {
 }
 
 .right .tooltip-excerpt a {
-    font-size: 14px;
-    color: var(--link-color);
+    color: #87ceeb !important;
+    text-decoration: none;
+}
+
+.right .tooltip-excerpt a:hover {
+    color: #add8e6 !important;
+    text-decoration: underline;
 }
 
 /* Memo highlighting styles */
@@ -1441,41 +1434,15 @@ a {
 
     /* Mobile tooltip adjustments */
     .tooltip .right {
-        min-width: 200px;
-        max-width: 300px;
-        position: absolute;
+        min-width: 150px;
+        max-width: 350px;
         left: 50%;
-        top: 100%;
-        margin-left: 0;
-        margin-top: 10px;
         transform: translateX(-50%);
+        white-space: normal;
     }
 
-    .tooltip .right i {
-        position: absolute;
-        top: -12px;
+    .tooltip .right::before {
         left: 50%;
-        right: auto;
-        margin-top: 0;
-        margin-left: -6px;
-        width: 24px;
-        height: 12px;
-        overflow: hidden;
-    }
-
-    .tooltip .right i::after {
-        content: "";
-        position: absolute;
-        width: 12px;
-        height: 12px;
-        left: 50%;
-        top: 8px;
-        transform: translate(-50%, -50%) rotate(45deg);
-        background-color: var(--primary-bg-color);
-        box-shadow: 0 1px 8px var(--primary-box-shadow-color);
-        border-top: 1px solid var(--border-color);
-        border-left: 1px solid var(--border-color);
-        border-bottom: none;
-        border-right: none;
+        transform: translateX(-50%);
     }
 }

@@ -12,6 +12,135 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
+/// Smart truncation function that limits text to a maximum number of sentences
+/// and finds good stopping points at sentence boundaries
+fn smart_truncate_excerpt(text: &str, max_sentences: usize) -> String {
+    if text.trim().is_empty() {
+        return String::new();
+    }
+
+    let mut result = String::new();
+    let mut sentence_count = 0;
+    let mut chars = text.char_indices().peekable();
+    let mut last_sentence_end = 0;
+    let max_chars = 200; // Hard limit for run-on sentences
+
+    while let Some((i, ch)) = chars.next() {
+        result.push(ch);
+
+        // Hard limit to prevent extremely long previews
+        if result.len() >= max_chars {
+            // Find a good breaking point near the limit
+            let mut truncate_pos = max_chars.min(result.len());
+            while truncate_pos > max_chars / 2 && truncate_pos > 0 {
+                if let Some(ch) = result.chars().nth(truncate_pos - 1) {
+                    if matches!(ch, ' ' | ',' | ';' | ':' | '.' | '!' | '?') {
+                        break;
+                    }
+                }
+                truncate_pos -= 1;
+            }
+            result.truncate(truncate_pos);
+            if !result.ends_with('.') && !result.ends_with('!') && !result.ends_with('?') {
+                result.push_str("...");
+            }
+            break;
+        }
+
+        // Check for sentence endings
+        if matches!(ch, '.' | '!' | '?') {
+            // Look ahead to see if this is truly the end of a sentence
+            let mut is_sentence_end = true;
+            let mut peek_pos = i + ch.len_utf8();
+
+            // Check for common abbreviations or decimals
+            if ch == '.' {
+                // Look back for common abbreviations
+                let before_period = text[..i].trim_end();
+                if before_period.ends_with(" Mr")
+                    || before_period.ends_with(" Mrs")
+                    || before_period.ends_with(" Dr")
+                    || before_period.ends_with(" Prof")
+                    || before_period.ends_with(" etc")
+                    || before_period.ends_with(" vs")
+                {
+                    is_sentence_end = false;
+                }
+
+                // Check if it's a decimal number
+                if let Some((_, next_ch)) = chars.peek() {
+                    if next_ch.is_ascii_digit() {
+                        is_sentence_end = false;
+                    }
+                }
+            }
+
+            // Look ahead for whitespace and capital letter (typical sentence pattern)
+            if is_sentence_end {
+                let remaining_text = &text[peek_pos..];
+                let next_chars: Vec<char> = remaining_text.chars().take(3).collect();
+
+                if !next_chars.is_empty() {
+                    // Must have whitespace after punctuation
+                    if !next_chars[0].is_whitespace() {
+                        is_sentence_end = false;
+                    } else if next_chars.len() > 1 {
+                        // Look for capital letter after whitespace
+                        let mut found_letter = false;
+                        for &nc in &next_chars[1..] {
+                            if nc.is_alphabetic() {
+                                found_letter = true;
+                                if !nc.is_uppercase() {
+                                    is_sentence_end = false;
+                                }
+                                break;
+                            } else if !nc.is_whitespace() {
+                                break;
+                            }
+                        }
+                        // If no letter found soon after, might not be sentence end
+                        if !found_letter && next_chars.len() == 3 {
+                            is_sentence_end = false;
+                        }
+                    }
+                } else {
+                    // End of text after punctuation - this is a sentence end
+                    is_sentence_end = true;
+                }
+            }
+
+            if is_sentence_end {
+                sentence_count += 1;
+                last_sentence_end = result.len();
+
+                if sentence_count >= max_sentences {
+                    // Truncate to the end of the last complete sentence
+                    result.truncate(last_sentence_end);
+                    break;
+                }
+            }
+        }
+    }
+
+    // If we still have no sentences and it's getting long, just cut it
+    if sentence_count == 0 && result.len() > 150 {
+        let mut truncate_pos = 150;
+        // Find a good breakpoint (space, comma, semicolon)
+        while truncate_pos > 100 && truncate_pos < result.len() {
+            if let Some(ch) = result.chars().nth(truncate_pos) {
+                if matches!(ch, ' ' | ',' | ';' | ':') {
+                    break;
+                }
+            }
+            truncate_pos -= 1;
+        }
+        result.truncate(truncate_pos);
+        result.push_str("...");
+    }
+
+    result.trim().to_string()
+}
+
 #[derive(Debug, Deserialize)]
 struct Note {
     ID: String,
@@ -1817,23 +1946,8 @@ fn generate_tag_page(
                 }
             }
 
-            // Limit to ~200 chars and add ellipsis
-            if content_text.len() > 200 {
-                let mut truncate_pos = 200;
-                // Find a good breakpoint (space or punctuation)
-                while truncate_pos > 150 {
-                    if content_text
-                        .chars()
-                        .nth(truncate_pos)
-                        .map_or(false, |c| c == ' ' || c == '.' || c == ',' || c == ';')
-                    {
-                        break;
-                    }
-                    truncate_pos -= 1;
-                }
-                content_text.truncate(truncate_pos);
-                content_text.push_str("...");
-            }
+            // Smart truncation - limit to 1 sentence for shorter previews
+            content_text = smart_truncate_excerpt(&content_text, 1);
 
             if !content_text.is_empty() {
                 content_text
@@ -3856,21 +3970,8 @@ fn render_text_mark(
                     }
                 }
 
-                // Limit excerpt length
-                if excerpt.len() > 300 {
-                    // Ensure we cut at a character boundary
-                    let mut end_index = 0;
-                    let mut char_count = 0;
-                    for (idx, _) in excerpt.char_indices() {
-                        end_index = idx;
-                        char_count += 1;
-                        if char_count >= 300 {
-                            break;
-                        }
-                    }
-                    excerpt = excerpt[0..end_index].to_string();
-                    excerpt.push_str("...");
-                }
+                // Smart truncation - limit to 1 sentence for shorter previews
+                excerpt = smart_truncate_excerpt(&excerpt, 1);
 
                 // Create tooltip HTML
                 html.push_str(&format!("<span{} class=\"tooltip\">", id_attr));
