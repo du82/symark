@@ -2051,6 +2051,35 @@ fn render_blocks_with_ids(
     html
 }
 
+// Helper function to detect if a superblock contains an image followed by text
+fn has_image_text_pattern(blocks: &[&Block]) -> bool {
+    if blocks.len() != 2 {
+        return false;
+    }
+
+    // Check if first block is a paragraph containing an image
+    let first_is_image = if blocks[0].Type == "NodeParagraph" {
+        blocks[0]
+            .Children
+            .iter()
+            .any(|child| child.Type == "NodeImage")
+    } else {
+        false
+    };
+
+    // Check if second block is a paragraph containing text
+    let second_is_text = if blocks[1].Type == "NodeParagraph" {
+        blocks[1]
+            .Children
+            .iter()
+            .any(|child| child.Type == "NodeText")
+    } else {
+        false
+    };
+
+    first_is_image && second_is_text
+}
+
 fn render_blocks(
     blocks: &[Block],
     notes_map: &HashMap<String, Note>,
@@ -2122,14 +2151,24 @@ fn render_blocks(
                     // For non-row layouts or rows without nested superblocks,
                     // we need to organize content
                     if layout_type == "row" {
-                        // For rows without nested superblocks, we should create columns
-                        // Group related blocks (e.g. heading + paragraph)
-                        if !content_blocks.is_empty() {
+                        // Check for image-text pattern and create two columns
+                        if has_image_text_pattern(&content_blocks) {
+                            // Create two separate columns for image-text layout
                             html.push_str("<div class=\"superblock superblock-col\">\n");
-                            for block in &content_blocks {
-                                html.push_str(&render_block(block, notes_map, id_to_path));
-                            }
+                            html.push_str(&render_block(content_blocks[0], notes_map, id_to_path));
                             html.push_str("</div>\n");
+                            html.push_str("<div class=\"superblock superblock-col\">\n");
+                            html.push_str(&render_block(content_blocks[1], notes_map, id_to_path));
+                            html.push_str("</div>\n");
+                        } else {
+                            // For rows without nested superblocks, create single column
+                            if !content_blocks.is_empty() {
+                                html.push_str("<div class=\"superblock superblock-col\">\n");
+                                for block in &content_blocks {
+                                    html.push_str(&render_block(block, notes_map, id_to_path));
+                                }
+                                html.push_str("</div>\n");
+                            }
                         }
                     } else {
                         // For column layouts, render blocks directly
