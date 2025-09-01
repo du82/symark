@@ -1085,6 +1085,106 @@ a {
     display: block;
 }
 
+/* Transcluded reference indicator styles */
+.block-with-indicator {
+    position: relative;
+    /* Ensure text content maintains same width as other elements */
+    max-width: var(--content-width);
+    /* No margin on the container itself - indicator goes outside */
+}
+
+.transcluded-indicator {
+    position: absolute;
+    top: 0;
+    right: -30px;
+    z-index: 10;
+}
+
+.transcluded-count {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    background-color: var(--background-alt);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    min-width: 16px;
+    line-height: 14px;
+}
+
+.transcluded-tooltip {
+    position: absolute;
+    top: 30px;
+    right: 0;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    min-width: 150px;
+    display: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+}
+
+.transcluded-tooltip::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    right: 5px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid #333;
+}
+
+.transcluded-tooltip-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #555;
+    padding-bottom: 4px;
+    display: block;
+}
+
+.transcluded-tooltip-content {
+    display: block;
+}
+
+.transcluded-tooltip-content a {
+    color: #87ceeb !important;
+    text-decoration: none;
+    display: block;
+    margin: 2px 0;
+}
+
+.transcluded-tooltip-content a:hover {
+    color: #add8e6 !important;
+    text-decoration: underline;
+}
+
+.transcluded-indicator:hover .transcluded-tooltip {
+    display: block;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .transcluded-indicator {
+        right: -25px;
+    }
+
+    .transcluded-tooltip {
+        right: -50px;
+        min-width: 120px;
+    }
+
+    .transcluded-tooltip::before {
+        right: 15px;
+    }
+}
+
 /* SuperBlock styles */
 .superblock {
     display: flex;

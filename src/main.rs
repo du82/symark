@@ -165,6 +165,98 @@ struct TocItem {
     level: u8,
 }
 
+// Structure to track transclusions
+#[derive(Debug, Default)]
+struct TransclusionTracker {
+    // Maps content_id -> set of (source_note_id, source_note_title) that transclude it
+    transclusions: HashMap<String, HashSet<(String, String)>>,
+}
+
+impl TransclusionTracker {
+    fn new() -> Self {
+        Self {
+            transclusions: HashMap::new(),
+        }
+    }
+
+    fn add_transclusion(
+        &mut self,
+        content_id: &str,
+        source_note_id: &str,
+        source_note_title: &str,
+    ) {
+        self.transclusions
+            .entry(content_id.to_string())
+            .or_insert_with(HashSet::new)
+            .insert((source_note_id.to_string(), source_note_title.to_string()));
+    }
+
+    fn get_transclusions(&self, content_id: &str) -> Option<&HashSet<(String, String)>> {
+        self.transclusions.get(content_id)
+    }
+
+    fn get_transclusion_count(&self, content_id: &str) -> usize {
+        self.transclusions
+            .get(content_id)
+            .map_or(0, |set| set.len())
+    }
+}
+
+// Function to collect all transclusions from notes
+fn collect_transclusions(notes_map: &HashMap<String, Note>) -> TransclusionTracker {
+    let mut tracker = TransclusionTracker::new();
+
+    for (source_note_id, note) in notes_map {
+        let source_note_title = &note.Properties.title;
+        collect_transclusions_from_blocks(
+            &note.Children,
+            &mut tracker,
+            source_note_id,
+            source_note_title,
+        );
+    }
+
+    tracker
+}
+
+// Helper function to recursively collect transclusions from blocks
+fn collect_transclusions_from_blocks(
+    blocks: &[Block],
+    tracker: &mut TransclusionTracker,
+    source_note_id: &str,
+    source_note_title: &str,
+) {
+    for block in blocks {
+        if block.Type == "NodeBlockQueryEmbed" {
+            // Find the NodeBlockQueryEmbedScript child that contains the query
+            if let Some(script_block) = block
+                .Children
+                .iter()
+                .find(|child| child.Type == "NodeBlockQueryEmbedScript")
+            {
+                // Extract the block ID from the query
+                if let Some(id_start) = script_block.Data.find("id='") {
+                    let id_start = id_start + 4; // Skip "id='"
+                    if let Some(id_end) = script_block.Data[id_start..].find('\'') {
+                        let content_id = &script_block.Data[id_start..id_start + id_end];
+                        tracker.add_transclusion(content_id, source_note_id, source_note_title);
+                    }
+                }
+            }
+        }
+
+        // Recursively check children
+        if !block.Children.is_empty() {
+            collect_transclusions_from_blocks(
+                &block.Children,
+                tracker,
+                source_note_id,
+                source_note_title,
+            );
+        }
+    }
+}
+
 const BACK_NAVIGATION_HTML: &str = r#"<a href="index.html" class="back-link">Back to home<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path></svg></a>"#;
 
 fn extract_toc_items(blocks: &[Block], headings: &mut Vec<TocItem>, id_counter: &mut usize) {
@@ -518,6 +610,10 @@ fn main() -> std::io::Result<()> {
         }
     }
 
+    // Collect transclusions first
+    println!("Collecting transclusions...");
+    let transclusion_tracker = collect_transclusions(&notes_map);
+
     println!("Reading HTML template...");
     let html_template_path = format!("themes/{}/page.html", theme_name);
     let html_template = read_template(&html_template_path);
@@ -532,6 +628,7 @@ fn main() -> std::io::Result<()> {
             &output_dir,
             &all_tags,
             &html_template,
+            &transclusion_tracker,
         )?;
         page_count += 1;
 
@@ -552,6 +649,7 @@ fn main() -> std::io::Result<()> {
             &output_dir,
             &all_tags,
             &html_template,
+            &transclusion_tracker,
         )?;
         page_count += 1;
     }
@@ -672,6 +770,7 @@ fn generate_custom_index_page(
     output_dir: &Path,
     all_tags: &HashSet<String>,
     html_template: &str,
+    transclusion_tracker: &TransclusionTracker,
 ) -> std::io::Result<()> {
     let note = &notes_map[index_id];
     let title = if !note.Properties.title.is_empty() {
@@ -708,7 +807,13 @@ fn generate_custom_index_page(
             }
 
             // Get text from paragraph
-            let paragraph_content = render_blocks(&block.Children, notes_map, id_to_path);
+            let paragraph_content = render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                false,
+            );
 
             // Strip HTML
             let mut plain_text = String::new();
@@ -866,7 +971,13 @@ fn generate_custom_index_page(
     let toc_html = generate_toc_html(&toc_items);
     html = html.replace("{{table_of_contents}}", &toc_html);
 
-    let content = render_blocks_with_ids(&note.Children, notes_map, id_to_path);
+    let content = render_blocks_with_ids(
+        &note.Children,
+        notes_map,
+        id_to_path,
+        transclusion_tracker,
+        false,
+    );
 
     let content_with_link = format!(
         "{}\n<div class=\"all-notes-link\"><a href=\"all.html\">View All Notes</a></div>",
@@ -1685,6 +1796,7 @@ fn generate_html_for_note(
     output_dir: &Path,
     all_tags: &HashSet<String>,
     html_template: &str,
+    transclusion_tracker: &TransclusionTracker,
 ) -> std::io::Result<()> {
     println!("Generating HTML for note ID: {}", id);
     let note = &notes_map[id];
@@ -1723,7 +1835,13 @@ fn generate_html_for_note(
             }
 
             // Get text from paragraph
-            let paragraph_content = render_blocks(&block.Children, notes_map, id_to_path);
+            let paragraph_content = render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                false,
+            );
 
             // Strip HTML
             let mut plain_text = String::new();
@@ -1909,8 +2027,14 @@ fn generate_html_for_note(
     tags.sort();
 
     // Generate content with heading IDs for TOC
-    let content = render_blocks_with_ids(&note.Children, notes_map, id_to_path);
-    html = html.replace("{{content}}", &content);
+    let content_html = render_blocks_with_ids(
+        &note.Children,
+        notes_map,
+        id_to_path,
+        transclusion_tracker,
+        false,
+    );
+    html = html.replace("{{content}}", &content_html);
 
     // Already handled OpenGraph URL earlier
 
@@ -2008,6 +2132,8 @@ fn render_blocks_with_ids(
     blocks: &[Block],
     notes_map: &HashMap<String, Note>,
     id_to_path: &HashMap<String, PathBuf>,
+    transclusion_tracker: &TransclusionTracker,
+    is_in_transclusion: bool,
 ) -> String {
     let mut id_counter = 0;
     let mut html = String::new();
@@ -2035,7 +2161,13 @@ fn render_blocks_with_ids(
                     } else if child.Type == "NodeTextMark" {
                         html.push_str(&render_text_mark(child, notes_map, id_to_path));
                     } else {
-                        html.push_str(&render_block(child, notes_map, id_to_path));
+                        html.push_str(&render_block(
+                            child,
+                            notes_map,
+                            id_to_path,
+                            transclusion_tracker,
+                            is_in_transclusion,
+                        ));
                     }
                 }
 
@@ -2043,7 +2175,13 @@ fn render_blocks_with_ids(
             }
             // For other block types, use the regular render_block function
             _ => {
-                html.push_str(&render_block(block, notes_map, id_to_path));
+                html.push_str(&render_block(
+                    block,
+                    notes_map,
+                    id_to_path,
+                    transclusion_tracker,
+                    is_in_transclusion,
+                ));
             }
         }
     }
@@ -2084,163 +2222,270 @@ fn render_blocks(
     blocks: &[Block],
     notes_map: &HashMap<String, Note>,
     id_to_path: &HashMap<String, PathBuf>,
+    transclusion_tracker: &TransclusionTracker,
+    is_in_transclusion: bool,
 ) -> String {
     let mut html = String::new();
 
     for block in blocks {
-        match block.Type.as_str() {
-            "NodeSuperBlock" => {
-                let layout_type = if let Some(layout_marker) = block
-                    .Children
-                    .iter()
-                    .find(|child| child.Type == "NodeSuperBlockLayoutMarker")
-                {
-                    layout_marker.Data.as_str()
-                } else {
-                    "row" // Default to column layout
-                };
-                let layout_type = if layout_type == "row" { "col" } else { "row" };
+        // Render the actual block content with potential indicator
+        let mut block_html = render_single_block(
+            block,
+            notes_map,
+            id_to_path,
+            transclusion_tracker,
+            is_in_transclusion,
+        );
 
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
+        // Add transcluded indicator if needed (only in original context)
+        if !is_in_transclusion
+            && !block.ID.is_empty()
+            && transclusion_tracker.get_transclusion_count(&block.ID) > 0
+        {
+            let transclusion_count = transclusion_tracker.get_transclusion_count(&block.ID);
+            let tooltip_content =
+                if let Some(transclusions) = transclusion_tracker.get_transclusions(&block.ID) {
+                    transclusions
+                        .iter()
+                        .map(|(note_id, note_title)| {
+                            format!(r#"<a href="{}.html">{}</a>"#, note_id, note_title)
+                        })
+                        .collect::<Vec<_>>()
+                        .join("<br>")
                 } else {
                     String::new()
                 };
-                html.push_str(&format!(
-                    "<div{} class=\"superblock superblock-{}\">\n",
-                    id_attr, layout_type
-                ));
 
-                let content_blocks: Vec<&Block> = block
-                    .Children
-                    .iter()
-                    .filter(|child| {
-                        child.Type != "NodeSuperBlockOpenMarker"
-                            && child.Type != "NodeSuperBlockLayoutMarker"
-                            && child.Type != "NodeSuperBlockCloseMarker"
-                    })
-                    .collect();
+            let indicator_html = format!(
+                r#"<span class="transcluded-indicator" data-count="{}">
+                    <span class="transcluded-count">{}</span>
+                    <span class="transcluded-tooltip">
+                        <span class="transcluded-tooltip-title">Transcluded in:</span>
+                        <span class="transcluded-tooltip-content">{}</span>
+                    </span>
+                </span>"#,
+                transclusion_count, transclusion_count, tooltip_content
+            );
 
-                let nested_superblocks: Vec<&Block> = content_blocks
+            // Wrap the block with a positioning container and add the indicator
+            html.push_str(&format!(
+                r#"<div class="block-with-indicator">{}{}</div>"#,
+                block_html, indicator_html
+            ));
+        } else {
+            html.push_str(&block_html);
+        }
+    }
+
+    html
+}
+
+fn render_single_block(
+    block: &Block,
+    notes_map: &HashMap<String, Note>,
+    id_to_path: &HashMap<String, PathBuf>,
+    transclusion_tracker: &TransclusionTracker,
+    is_in_transclusion: bool,
+) -> String {
+    let mut html = String::new();
+
+    match block.Type.as_str() {
+        "NodeSuperBlock" => {
+            let layout_type = if let Some(layout_marker) = block
+                .Children
+                .iter()
+                .find(|child| child.Type == "NodeSuperBlockLayoutMarker")
+            {
+                layout_marker.Data.as_str()
+            } else {
+                "row" // Default to column layout
+            };
+            let layout_type = if layout_type == "row" { "col" } else { "row" };
+
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!(
+                "<div{} class=\"superblock superblock-{}\">\n",
+                id_attr, layout_type
+            ));
+
+            let content_blocks: Vec<&Block> = block
+                .Children
+                .iter()
+                .filter(|child| {
+                    child.Type != "NodeSuperBlockOpenMarker"
+                        && child.Type != "NodeSuperBlockLayoutMarker"
+                        && child.Type != "NodeSuperBlockCloseMarker"
+                })
+                .collect();
+
+            let nested_superblocks: Vec<&Block> = content_blocks
+                .iter()
+                .filter(|b| b.Type == "NodeSuperBlock")
+                .cloned()
+                .collect();
+
+            if layout_type == "row" && !nested_superblocks.is_empty() {
+                for nested in &nested_superblocks {
+                    html.push_str(&render_block(
+                        nested,
+                        notes_map,
+                        id_to_path,
+                        transclusion_tracker,
+                        is_in_transclusion,
+                    ));
+                }
+
+                let other_blocks: Vec<&Block> = content_blocks
                     .iter()
-                    .filter(|b| b.Type == "NodeSuperBlock")
+                    .filter(|b| b.Type != "NodeSuperBlock")
                     .cloned()
                     .collect();
 
-                if layout_type == "row" && !nested_superblocks.is_empty() {
-                    for nested in &nested_superblocks {
-                        html.push_str(&render_block(nested, notes_map, id_to_path));
+                if !other_blocks.is_empty() {
+                    // If there are blocks that aren't in a nested superblock,
+                    // wrap them in a column
+                    html.push_str("<div class=\"superblock superblock-col\">\n");
+                    for block in &other_blocks {
+                        html.push_str(&render_block(
+                            block,
+                            notes_map,
+                            id_to_path,
+                            transclusion_tracker,
+                            is_in_transclusion,
+                        ));
                     }
-
-                    let other_blocks: Vec<&Block> = content_blocks
-                        .iter()
-                        .filter(|b| b.Type != "NodeSuperBlock")
-                        .cloned()
-                        .collect();
-
-                    if !other_blocks.is_empty() {
-                        // If there are blocks that aren't in a nested superblock,
-                        // wrap them in a column
+                    html.push_str("</div>\n");
+                }
+            } else {
+                // For non-row layouts or rows without nested superblocks,
+                // we need to organize content
+                if layout_type == "row" {
+                    // Check for image-text pattern and create two columns
+                    if has_image_text_pattern(&content_blocks) {
+                        // Create two separate columns for image-text layout
                         html.push_str("<div class=\"superblock superblock-col\">\n");
-                        for block in &other_blocks {
-                            html.push_str(&render_block(block, notes_map, id_to_path));
-                        }
+                        html.push_str(&render_block(
+                            content_blocks[0],
+                            notes_map,
+                            id_to_path,
+                            transclusion_tracker,
+                            is_in_transclusion,
+                        ));
                         html.push_str("</div>\n");
-                    }
-                } else {
-                    // For non-row layouts or rows without nested superblocks,
-                    // we need to organize content
-                    if layout_type == "row" {
-                        // Check for image-text pattern and create two columns
-                        if has_image_text_pattern(&content_blocks) {
-                            // Create two separate columns for image-text layout
-                            html.push_str("<div class=\"superblock superblock-col\">\n");
-                            html.push_str(&render_block(content_blocks[0], notes_map, id_to_path));
-                            html.push_str("</div>\n");
-                            html.push_str("<div class=\"superblock superblock-col\">\n");
-                            html.push_str(&render_block(content_blocks[1], notes_map, id_to_path));
-                            html.push_str("</div>\n");
-                        } else {
-                            // For rows without nested superblocks, create single column
-                            if !content_blocks.is_empty() {
-                                html.push_str("<div class=\"superblock superblock-col\">\n");
-                                for block in &content_blocks {
-                                    html.push_str(&render_block(block, notes_map, id_to_path));
-                                }
-                                html.push_str("</div>\n");
-                            }
-                        }
+                        html.push_str("<div class=\"superblock superblock-col\">\n");
+                        html.push_str(&render_block(
+                            content_blocks[1],
+                            notes_map,
+                            id_to_path,
+                            transclusion_tracker,
+                            is_in_transclusion,
+                        ));
+                        html.push_str("</div>\n");
                     } else {
-                        // For column layouts, render blocks directly
-                        for block in &content_blocks {
-                            html.push_str(&render_block(block, notes_map, id_to_path));
+                        // For rows without nested superblocks, create single column
+                        if !content_blocks.is_empty() {
+                            html.push_str("<div class=\"superblock superblock-col\">\n");
+                            for block in &content_blocks {
+                                html.push_str(&render_block(
+                                    block,
+                                    notes_map,
+                                    id_to_path,
+                                    transclusion_tracker,
+                                    is_in_transclusion,
+                                ));
+                            }
+                            html.push_str("</div>\n");
                         }
                     }
-                }
-
-                html.push_str("</div>\n");
-            }
-            "NodeParagraph" => {
-                let mut class_attr = String::new();
-                let mut style_attr = String::new();
-
-                // Check if paragraph has special styling
-                if !block.Properties.style.is_empty() {
-                    let (class_name_opt, keep_style) =
-                        get_style_class(&block.Properties.style, false);
-
-                    let has_class = if let Some(ref class_name) = class_name_opt {
-                        class_attr = format!(" class=\"{}\"", class_name);
-                        true
-                    } else {
-                        false
-                    };
-
-                    // Keep the original style if needed
-                    if keep_style || !has_class {
-                        style_attr = format!(" style=\"{}\"", block.Properties.style);
+                } else {
+                    // For column layouts, render blocks directly
+                    for block in &content_blocks {
+                        html.push_str(&render_block(
+                            block,
+                            notes_map,
+                            id_to_path,
+                            transclusion_tracker,
+                            is_in_transclusion,
+                        ));
                     }
                 }
-
-                // Check if this paragraph contains only an image
-                let contains_only_image =
-                    block.Children.len() == 1 && block.Children[0].Type == "NodeImage";
-
-                // Always output the paragraph with its styling, even for images
-                // This allows for centered or aligned images through paragraph styling
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-                html.push_str(&format!("<p{}{}{}>", id_attr, class_attr, style_attr));
-                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                html.push_str("</p>\n");
             }
-            "NodeHeading" => {
-                let level = block.HeadingLevel.max(1).min(6);
-                let id = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
+
+            html.push_str("</div>\n");
+        }
+        "NodeParagraph" => {
+            let mut class_attr = String::new();
+            let mut style_attr = String::new();
+
+            // Check if paragraph has special styling
+            if !block.Properties.style.is_empty() {
+                let (class_name_opt, keep_style) = get_style_class(&block.Properties.style, false);
+
+                let has_class = if let Some(ref class_name) = class_name_opt {
+                    class_attr = format!(" class=\"{}\"", class_name);
+                    true
                 } else {
-                    String::new()
+                    false
                 };
-                html.push_str(&format!("<h{}{}>", level, id));
-                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                html.push_str(&format!("</h{}>\n", level));
+
+                // Keep the original style if needed
+                if keep_style || !has_class {
+                    style_attr = format!(" style=\"{}\"", block.Properties.style);
+                }
             }
-            "NodeList" => {
-                // Determine if ordered or unordered list
-                let list_type = if let serde_json::Value::Object(map) = &block.ListData {
-                    if map.contains_key("Typ") {
-                        // Check for task list (Typ == 3)
-                        if let Some(serde_json::Value::Number(num)) = map.get("Typ") {
-                            if num.as_i64() == Some(3) {
-                                "task"
-                            } else if num.as_i64() == Some(1) {
-                                "ordered"
-                            } else {
-                                "unordered"
-                            }
+
+            // Check if this paragraph contains only an image
+            let contains_only_image =
+                block.Children.len() == 1 && block.Children[0].Type == "NodeImage";
+
+            // Always output the paragraph with its styling, even for images
+            // This allows for centered or aligned images through paragraph styling
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!("<p{}{}{}>", id_attr, class_attr, style_attr));
+            html.push_str(&render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                is_in_transclusion,
+            ));
+            html.push_str("</p>\n");
+        }
+        "NodeHeading" => {
+            let level = block.HeadingLevel.max(1).min(6);
+            let id = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!("<h{}{}>", level, id));
+            html.push_str(&render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                is_in_transclusion,
+            ));
+            html.push_str(&format!("</h{}>\n", level));
+        }
+        "NodeList" => {
+            // Determine if ordered or unordered list
+            let list_type = if let serde_json::Value::Object(map) = &block.ListData {
+                if map.contains_key("Typ") {
+                    // Check for task list (Typ == 3)
+                    if let Some(serde_json::Value::Number(num)) = map.get("Typ") {
+                        if num.as_i64() == Some(3) {
+                            "task"
+                        } else if num.as_i64() == Some(1) {
+                            "ordered"
                         } else {
                             "unordered"
                         }
@@ -2249,402 +2494,484 @@ fn render_blocks(
                     }
                 } else {
                     "unordered"
-                };
-
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-
-                match list_type {
-                    "ordered" => html.push_str(&format!("<ol{}>\n", id_attr)),
-                    _ => html.push_str(&format!("<ul{}>\n", id_attr)),
                 }
+            } else {
+                "unordered"
+            };
 
-                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
 
-                match list_type {
-                    "ordered" => html.push_str("</ol>\n"),
-                    _ => html.push_str("</ul>\n"),
-                }
+            match list_type {
+                "ordered" => html.push_str(&format!("<ol{}>\n", id_attr)),
+                _ => html.push_str(&format!("<ul{}>\n", id_attr)),
             }
-            "NodeListItem" => {
-                // Check if this is a task list item
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
 
-                if block
+            html.push_str(&render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                is_in_transclusion,
+            ));
+
+            match list_type {
+                "ordered" => html.push_str("</ol>\n"),
+                _ => html.push_str("</ul>\n"),
+            }
+        }
+        "NodeListItem" => {
+            // Check if this is a task list item
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+
+            if block
+                .Children
+                .iter()
+                .any(|child| child.Type == "NodeTaskListItemMarker")
+            {
+                // Make the list item properly positioned
+                html.push_str(&format!("<li{} style=\"position: relative; padding-left: 30px; margin-bottom: 12px; list-style: none; \">", id_attr));
+
+                // Check if the task is checked or unchecked
+                if let Some(task_marker_block) = block
                     .Children
                     .iter()
-                    .any(|child| child.Type == "NodeTaskListItemMarker")
+                    .find(|child| child.Type == "NodeTaskListItemMarker")
                 {
-                    // Make the list item properly positioned
-                    html.push_str(&format!("<li{} style=\"position: relative; padding-left: 30px; margin-bottom: 12px; list-style: none; \">", id_attr));
+                    if task_marker_block.TaskListItemChecked {
+                        // Checked item
+                        html.push_str("<span class=\"task-checkbox-checked\"></span>");
+                        html.push_str("<span class=\"task-complete\" style=\"text-decoration: line-through; color: #7f8c8d;\">");
 
-                    // Check if the task is checked or unchecked
-                    if let Some(task_marker_block) = block
-                        .Children
-                        .iter()
-                        .find(|child| child.Type == "NodeTaskListItemMarker")
-                    {
-                        if task_marker_block.TaskListItemChecked {
-                            // Checked item
-                            html.push_str("<span class=\"task-checkbox-checked\"></span>");
-                            html.push_str("<span class=\"task-complete\" style=\"text-decoration: line-through; color: #7f8c8d;\">");
-
-                            // Filter out the marker from rendering
-                            for child in &block.Children {
-                                if child.Type != "NodeTaskListItemMarker" {
-                                    html.push_str(&render_block(child, notes_map, id_to_path));
-                                }
-                            }
-                            html.push_str("</span>");
-                        } else {
-                            html.push_str("<span class=\"task-checkbox-unchecked\"></span>");
-
-                            for child in &block.Children {
-                                if child.Type != "NodeTaskListItemMarker" {
-                                    html.push_str(&render_block(child, notes_map, id_to_path));
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    html.push_str(&format!("<li{}>", id_attr));
-
-                    let mut content = String::new();
-                    let mut last_was_paragraph = false;
-
-                    for child in &block.Children {
-                        if child.Type == "NodeParagraph" {
-                            if last_was_paragraph {
-                                content.push_str(&render_blocks(
-                                    &child.Children,
+                        // Filter out the marker from rendering
+                        for child in &block.Children {
+                            if child.Type != "NodeTaskListItemMarker" {
+                                html.push_str(&render_block(
+                                    child,
                                     notes_map,
                                     id_to_path,
+                                    transclusion_tracker,
+                                    is_in_transclusion,
                                 ));
-                            } else {
-                                content.push_str(&render_block(child, notes_map, id_to_path));
-                                last_was_paragraph = true;
                             }
-                        } else {
-                            content.push_str(&render_block(child, notes_map, id_to_path));
-                            last_was_paragraph = false;
+                        }
+                        html.push_str("</span>");
+                    } else {
+                        html.push_str("<span class=\"task-checkbox-unchecked\"></span>");
+
+                        for child in &block.Children {
+                            if child.Type != "NodeTaskListItemMarker" {
+                                html.push_str(&render_block(
+                                    child,
+                                    notes_map,
+                                    id_to_path,
+                                    transclusion_tracker,
+                                    is_in_transclusion,
+                                ));
+                            }
                         }
                     }
-
-                    html.push_str(&content);
                 }
-                html.push_str("</li>\n");
-            }
-            "NodeTaskListItemMarker" => {
-                // Skip rendering
-            }
-            "NodeBlockquote" => {
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-                html.push_str(&format!("<blockquote{}>", id_attr));
-                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                html.push_str("</blockquote>\n");
-            }
-            "NodeThematicBreak" => {
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-                html.push_str(&format!("<hr{}>\n", id_attr));
-            }
-            "NodeTable" => {
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-                html.push_str(&format!("<table{}>\n", id_attr));
-                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                html.push_str("</table>\n");
-            }
-            "NodeTableHead" => {
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-                html.push_str(&format!("<thead{}>\n", id_attr));
-                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                html.push_str("</thead>\n");
-            }
-            "NodeTableRow" => {
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-                html.push_str(&format!("<tr{}>\n", id_attr));
-                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                html.push_str("</tr>\n");
-            }
-            "NodeTableCell" => {
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-                if block.Data == "th" {
-                    html.push_str(&format!("<th{}>", id_attr));
-                    html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                    html.push_str("</th>\n");
-                } else {
-                    html.push_str(&format!("<td{}>", id_attr));
-                    html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-                    html.push_str("</td>\n");
-                }
-            }
-            "NodeCodeBlock" => {
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-                html.push_str(&format!("<pre{}><code", id_attr));
+            } else {
+                html.push_str(&format!("<li{}>", id_attr));
 
-                // Add language class if available
-                if !block.CodeBlockInfo.is_empty() {
-                    // CodeBlockInfo might be base64 encoded
-                    if let Ok(lang) = decode(&block.CodeBlockInfo) {
-                        if let Ok(lang_str) = String::from_utf8(lang) {
-                            html.push_str(&format!(" class=\"language-{}\"", lang_str));
+                let mut content = String::new();
+                let mut last_was_paragraph = false;
+
+                for child in &block.Children {
+                    if child.Type == "NodeParagraph" {
+                        if last_was_paragraph {
+                            content.push_str(&render_blocks(
+                                &child.Children,
+                                notes_map,
+                                id_to_path,
+                                transclusion_tracker,
+                                is_in_transclusion,
+                            ));
+                        } else {
+                            content.push_str(&render_block(
+                                child,
+                                notes_map,
+                                id_to_path,
+                                transclusion_tracker,
+                                is_in_transclusion,
+                            ));
+                            last_was_paragraph = true;
                         }
                     } else {
-                        html.push_str(&format!(" class=\"language-{}\"", block.CodeBlockInfo));
+                        content.push_str(&render_block(
+                            child,
+                            notes_map,
+                            id_to_path,
+                            transclusion_tracker,
+                            is_in_transclusion,
+                        ));
+                        last_was_paragraph = false;
                     }
                 }
 
-                html.push_str(">");
-
-                // Find the code content in children
-                for child in &block.Children {
-                    if child.Type == "NodeCodeBlockCode" {
-                        html.push_str(&escape_html(&child.Data));
-                    }
-                }
-
-                html.push_str("</code></pre>\n");
+                html.push_str(&content);
             }
-            "NodeText" => {
-                // For text nodes, we generally don't add IDs as they're inline elements,
-                // but we can wrap them in a span with an ID if needed
-                if !block.ID.is_empty() {
-                    html.push_str(&format!("<span id=\"{}\">", block.ID));
-                    html.push_str(&escape_html(&block.Data));
-                    html.push_str("</span>");
+            html.push_str("</li>\n");
+        }
+        "NodeTaskListItemMarker" => {
+            // Skip rendering
+        }
+        "NodeBlockquote" => {
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!("<blockquote{}>", id_attr));
+            html.push_str(&render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                is_in_transclusion,
+            ));
+            html.push_str("</blockquote>\n");
+        }
+        "NodeThematicBreak" => {
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!("<hr{}>\n", id_attr));
+        }
+        "NodeTable" => {
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!("<table{}>\n", id_attr));
+            html.push_str(&render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                is_in_transclusion,
+            ));
+            html.push_str("</table>\n");
+        }
+        "NodeTableHead" => {
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!("<thead{}>\n", id_attr));
+            html.push_str(&render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                is_in_transclusion,
+            ));
+            html.push_str("</thead>\n");
+        }
+        "NodeTableRow" => {
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!("<tr{}>\n", id_attr));
+            html.push_str(&render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                is_in_transclusion,
+            ));
+            html.push_str("</tr>\n");
+        }
+        "NodeTableCell" => {
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            if block.Data == "th" {
+                html.push_str(&format!("<th{}>", id_attr));
+                html.push_str(&render_blocks(
+                    &block.Children,
+                    notes_map,
+                    id_to_path,
+                    transclusion_tracker,
+                    is_in_transclusion,
+                ));
+                html.push_str("</th>\n");
+            } else {
+                html.push_str(&format!("<td{}>", id_attr));
+                html.push_str(&render_blocks(
+                    &block.Children,
+                    notes_map,
+                    id_to_path,
+                    transclusion_tracker,
+                    is_in_transclusion,
+                ));
+                html.push_str("</td>\n");
+            }
+        }
+        "NodeCodeBlock" => {
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!("<pre{}><code", id_attr));
+
+            // Add language class if available
+            if !block.CodeBlockInfo.is_empty() {
+                // CodeBlockInfo might be base64 encoded
+                if let Ok(lang) = decode(&block.CodeBlockInfo) {
+                    if let Ok(lang_str) = String::from_utf8(lang) {
+                        html.push_str(&format!(" class=\"language-{}\"", lang_str));
+                    }
                 } else {
-                    html.push_str(&escape_html(&block.Data));
+                    html.push_str(&format!(" class=\"language-{}\"", block.CodeBlockInfo));
                 }
             }
-            "NodeTextMark" => {
-                // Update this line to pass all required arguments
-                html.push_str(&render_text_mark(block, notes_map, id_to_path));
+
+            html.push_str(">");
+
+            // Find the code content in children
+            for child in &block.Children {
+                if child.Type == "NodeCodeBlockCode" {
+                    html.push_str(&escape_html(&child.Data));
+                }
             }
-            "NodeImage" => {
-                // Handle image nodes
-                let mut image_src = String::new();
-                let mut alt_text = String::new();
-                let mut caption = String::new();
-                let mut style_attr = String::new();
-                let mut parent_style_attr = String::new();
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
+
+            html.push_str("</code></pre>\n");
+        }
+        "NodeText" => {
+            // For text nodes, we generally don't add IDs as they're inline elements,
+            // but we can wrap them in a span with an ID if needed
+            if !block.ID.is_empty() {
+                html.push_str(&format!("<span id=\"{}\">", block.ID));
+                html.push_str(&escape_html(&block.Data));
+                html.push_str("</span>");
+            } else {
+                html.push_str(&escape_html(&block.Data));
+            }
+        }
+        "NodeTextMark" => {
+            // Update this line to pass all required arguments
+            html.push_str(&render_text_mark(block, notes_map, id_to_path));
+        }
+        "NodeImage" => {
+            // Handle image nodes
+            let mut image_src = String::new();
+            let mut alt_text = String::new();
+            let mut caption = String::new();
+            let mut style_attr = String::new();
+            let mut parent_style_attr = String::new();
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+
+            // Find the link destination in children
+            for child in &block.Children {
+                if child.Type == "NodeLinkDest" {
+                    image_src = child.Data.clone();
+                } else if child.Type == "NodeLinkText" {
+                    alt_text = child.Data.clone();
+                } else if child.Type == "NodeLinkTitle" {
+                    caption = child.Data.clone();
+                }
+            }
+
+            // Check if there are style properties for the image
+            if !block.Properties.style.is_empty() {
+                style_attr = format!(" style=\"{}\"", block.Properties.style);
+            }
+
+            // Check if there's a parent-style attribute
+            if let Some(parent_style) = block.Properties.parent_style.as_ref() {
+                if !parent_style.is_empty() {
+                    parent_style_attr = format!(" style=\"{}\"", parent_style);
+                }
+            }
+
+            if !image_src.is_empty() {
+                // Check if we have a caption, if so we'll use a figure/figcaption structure
+                let has_caption = !caption.is_empty();
+
+                // If we have a caption, open a figure element
+                if has_caption {
+                    html.push_str(&format!("<figure{} class=\"image-with-caption\">", id_attr));
+                }
+
+                // If parent styling is present, wrap the image in a div with that styling
+                if !parent_style_attr.is_empty() {
+                    let wrapper_id = if !block.ID.is_empty() && !has_caption {
+                        // If we have an ID and no caption, use it for the wrapper instead of the img
+                        // (if we have a caption, the ID is already on the figure element)
+                        format!(" id=\"{}\"", block.ID)
+                    } else {
+                        String::new()
+                    };
+                    html.push_str(&format!("<div{}{}>", wrapper_id, parent_style_attr));
+
+                    // In this case, don't add the ID to the img tag since it's on the wrapper
+                    html.push_str(&format!(
+                        "<img src=\"{}\" alt=\"{}\"{}/>",
+                        image_src, alt_text, style_attr
+                    ));
+
+                    // Close the parent div
+                    html.push_str("</div>");
                 } else {
-                    String::new()
-                };
-
-                // Find the link destination in children
-                for child in &block.Children {
-                    if child.Type == "NodeLinkDest" {
-                        image_src = child.Data.clone();
-                    } else if child.Type == "NodeLinkText" {
-                        alt_text = child.Data.clone();
-                    } else if child.Type == "NodeLinkTitle" {
-                        caption = child.Data.clone();
-                    }
+                    // No wrapper, add ID directly to the img tag if no caption
+                    // (if we have a caption, the ID is already on the figure element)
+                    let img_id_attr = if has_caption { "" } else { &id_attr };
+                    html.push_str(&format!(
+                        "<img{} src=\"{}\" alt=\"{}\"{}/>",
+                        img_id_attr, image_src, alt_text, style_attr
+                    ));
                 }
 
-                // Check if there are style properties for the image
-                if !block.Properties.style.is_empty() {
-                    style_attr = format!(" style=\"{}\"", block.Properties.style);
+                // Add figcaption if we have a caption
+                if has_caption {
+                    html.push_str(&format!(
+                        "<figcaption>{}</figcaption>",
+                        escape_html(&caption)
+                    ));
+
+                    // Close the figure
+                    html.push_str("</figure>");
                 }
+            }
+        }
+        "NodeBr" => {
+            let id_attr = if !block.ID.is_empty() {
+                format!(" id=\"{}\"", block.ID)
+            } else {
+                String::new()
+            };
+            html.push_str(&format!("<br{}>", id_attr));
+        }
+        "NodeBlockQueryEmbed" => {
+            // Process block query embed (transclusion)
+            // First, find the NodeBlockQueryEmbedScript child that contains the query
+            if let Some(script_block) = block
+                .Children
+                .iter()
+                .find(|child| child.Type == "NodeBlockQueryEmbedScript")
+            {
+                // Extract the block ID from the query
+                // The query format is typically: "select * from blocks where id='BLOCK_ID'"
+                if let Some(id_start) = script_block.Data.find("id='") {
+                    let id_start = id_start + 4; // Skip "id='"
+                    if let Some(id_end) = script_block.Data[id_start..].find('\'') {
+                        let content_id = &script_block.Data[id_start..id_start + id_end];
 
-                // Check if there's a parent-style attribute
-                if let Some(parent_style) = block.Properties.parent_style.as_ref() {
-                    if !parent_style.is_empty() {
-                        parent_style_attr = format!(" style=\"{}\"", parent_style);
-                    }
-                }
-
-                if !image_src.is_empty() {
-                    // Check if we have a caption, if so we'll use a figure/figcaption structure
-                    let has_caption = !caption.is_empty();
-
-                    // If we have a caption, open a figure element
-                    if has_caption {
-                        html.push_str(&format!("<figure{} class=\"image-with-caption\">", id_attr));
-                    }
-
-                    // If parent styling is present, wrap the image in a div with that styling
-                    if !parent_style_attr.is_empty() {
-                        let wrapper_id = if !block.ID.is_empty() && !has_caption {
-                            // If we have an ID and no caption, use it for the wrapper instead of the img
-                            // (if we have a caption, the ID is already on the figure element)
+                        // Create a div wrapper for the transcluded content
+                        let wrapper_id = if !block.ID.is_empty() {
                             format!(" id=\"{}\"", block.ID)
                         } else {
                             String::new()
                         };
-                        html.push_str(&format!("<div{}{}>", wrapper_id, parent_style_attr));
+                        html.push_str(&format!("<div{} class=\"transcluded-block\">", wrapper_id));
 
-                        // In this case, don't add the ID to the img tag since it's on the wrapper
-                        html.push_str(&format!(
-                            "<img src=\"{}\" alt=\"{}\"{}/>",
-                            image_src, alt_text, style_attr
-                        ));
-
-                        // Close the parent div
-                        html.push_str("</div>");
-                    } else {
-                        // No wrapper, add ID directly to the img tag if no caption
-                        // (if we have a caption, the ID is already on the figure element)
-                        let img_id_attr = if has_caption { "" } else { &id_attr };
-                        html.push_str(&format!(
-                            "<img{} src=\"{}\" alt=\"{}\"{}/>",
-                            img_id_attr, image_src, alt_text, style_attr
-                        ));
-                    }
-
-                    // Add figcaption if we have a caption
-                    if has_caption {
-                        html.push_str(&format!(
-                            "<figcaption>{}</figcaption>",
-                            escape_html(&caption)
-                        ));
-
-                        // Close the figure
-                        html.push_str("</figure>");
-                    }
-                }
-            }
-            "NodeBr" => {
-                let id_attr = if !block.ID.is_empty() {
-                    format!(" id=\"{}\"", block.ID)
-                } else {
-                    String::new()
-                };
-                html.push_str(&format!("<br{}>", id_attr));
-            }
-            "NodeBlockQueryEmbed" => {
-                // Process block query embed (transclusion)
-                // First, find the NodeBlockQueryEmbedScript child that contains the query
-                if let Some(script_block) = block
-                    .Children
-                    .iter()
-                    .find(|child| child.Type == "NodeBlockQueryEmbedScript")
-                {
-                    // Extract the block ID from the query
-                    // The query format is typically: "select * from blocks where id='BLOCK_ID'"
-                    if let Some(id_start) = script_block.Data.find("id='") {
-                        let id_start = id_start + 4; // Skip "id='"
-                        if let Some(id_end) = script_block.Data[id_start..].find('\'') {
-                            let content_id = &script_block.Data[id_start..id_start + id_end];
-
-                            // Create a div wrapper for the transcluded content
-                            let wrapper_id = if !block.ID.is_empty() {
-                                format!(" id=\"{}\"", block.ID)
-                            } else {
-                                String::new()
-                            };
-                            html.push_str(&format!(
-                                "<div{} class=\"transcluded-block\">",
-                                wrapper_id
-                            ));
-
-                            // Add source link button
-                            let source_url = if notes_map.contains_key(content_id) {
-                                format!("{}.html", content_id) // Link to the note
-                            } else {
-                                // For block IDs, try to find which note contains it
-                                let mut source_note_id = String::new();
-                                for (note_id, note) in notes_map.iter() {
-                                    if find_block_by_id(content_id, &note.Children).is_some() {
-                                        source_note_id = note_id.clone();
-                                        break;
-                                    }
-                                }
-                                format!("{}.html#{}", source_note_id, content_id) // Link to the note with block ID anchor
-                            };
-
-                            html.push_str(&format!(
-                                "<a href=\"{}\" class=\"source-link\">Go to source</a>",
-                                source_url
-                            ));
-
-                            // Check if this is a block ID or a note ID
-                            let mut found = false;
-
-                            // First try to find the specific block by ID
-                            for note in notes_map.values() {
-                                if let Some(found_block) =
-                                    find_block_by_id(content_id, &note.Children)
-                                {
-                                    html.push_str(&render_block(
-                                        found_block,
-                                        notes_map,
-                                        id_to_path,
-                                    ));
-                                    found = true;
+                        // Add source link button
+                        let source_url = if notes_map.contains_key(content_id) {
+                            format!("{}.html", content_id) // Link to the note
+                        } else {
+                            // For block IDs, try to find which note contains it
+                            let mut source_note_id = String::new();
+                            for (note_id, note) in notes_map.iter() {
+                                if find_block_by_id(content_id, &note.Children).is_some() {
+                                    source_note_id = note_id.clone();
                                     break;
                                 }
                             }
+                            format!("{}.html#{}", source_note_id, content_id) // Link to the note with block ID anchor
+                        };
 
-                            // If not found as a block, check if it's a note ID
-                            if !found {
-                                if let Some(note) = notes_map.get(content_id) {
-                                    // Render all blocks from the note
-                                    html.push_str(&render_blocks(
-                                        &note.Children,
-                                        notes_map,
-                                        id_to_path,
-                                    ));
-                                    found = true;
-                                }
-                            }
+                        html.push_str(&format!(
+                            "<a href=\"{}\" class=\"source-link\">Go to source</a>",
+                            source_url
+                        ));
 
-                            if !found {
-                                html.push_str(&format!(
-                                    "<p><em>Transcluded content not found: {}</em></p>",
-                                    content_id
+                        // Check if this is a block ID or a note ID
+                        let mut found = false;
+
+                        // First try to find the specific block by ID
+                        for note in notes_map.values() {
+                            if let Some(found_block) = find_block_by_id(content_id, &note.Children)
+                            {
+                                html.push_str(&render_block(
+                                    found_block,
+                                    notes_map,
+                                    id_to_path,
+                                    transclusion_tracker,
+                                    true, // This is inside a transclusion
                                 ));
-                                // No need to remove the source link with CSS-based approach
+                                found = true;
+                                break;
                             }
-
-                            html.push_str("</div>");
                         }
+
+                        // If not found as a block, check if it's a note ID
+                        if !found {
+                            if let Some(note) = notes_map.get(content_id) {
+                                // Render all blocks from the note
+                                html.push_str(&render_blocks(
+                                    &note.Children,
+                                    notes_map,
+                                    id_to_path,
+                                    transclusion_tracker,
+                                    true, // This is inside a transclusion
+                                ));
+                                found = true;
+                            }
+                        }
+
+                        if !found {
+                            html.push_str(&format!(
+                                "<p><em>Transcluded content not found: {}</em></p>",
+                                content_id
+                            ));
+                            // No need to remove the source link with CSS-based approach
+                        }
+
+                        html.push_str("</div>");
                     }
-                } else {
-                    // Fallback - just render children
-                    html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
                 }
+            } else {
+                // Fallback - just render children
+                html.push_str(&render_blocks(
+                    &block.Children,
+                    notes_map,
+                    id_to_path,
+                    transclusion_tracker,
+                    is_in_transclusion,
+                ));
             }
-            _ => {
-                // For unhandled node types, just render their children
-                html.push_str(&render_blocks(&block.Children, notes_map, id_to_path));
-            }
+        }
+        _ => {
+            // For unhandled node types, just render their children
+            html.push_str(&render_blocks(
+                &block.Children,
+                notes_map,
+                id_to_path,
+                transclusion_tracker,
+                is_in_transclusion,
+            ));
         }
     }
 
@@ -3555,9 +3882,16 @@ fn render_block(
     block: &Block,
     notes_map: &HashMap<String, Note>,
     id_to_path: &HashMap<String, PathBuf>,
+    transclusion_tracker: &TransclusionTracker,
+    is_in_transclusion: bool,
 ) -> String {
-    // Create a slice with a single element instead of a Vec
-    render_blocks(std::slice::from_ref(block), notes_map, id_to_path)
+    render_blocks(
+        std::slice::from_ref(block),
+        notes_map,
+        id_to_path,
+        transclusion_tracker,
+        is_in_transclusion,
+    )
 }
 
 fn escape_html(text: &str) -> String {
