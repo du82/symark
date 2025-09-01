@@ -172,6 +172,8 @@ struct MarginInfoTracker {
     transclusions: HashMap<String, HashSet<(String, String)>>,
     // Maps content_id -> set of (source_note_id, source_note_title) that link to it
     linked_mentions: HashMap<String, HashSet<(String, String)>>,
+    // Maps note_id -> set of (source_note_id, source_note_title) that link to the entire page
+    page_linked_mentions: HashMap<String, HashSet<(String, String)>>,
 }
 
 impl MarginInfoTracker {
@@ -179,6 +181,7 @@ impl MarginInfoTracker {
         Self {
             transclusions: HashMap::new(),
             linked_mentions: HashMap::new(),
+            page_linked_mentions: HashMap::new(),
         }
     }
 
@@ -206,12 +209,28 @@ impl MarginInfoTracker {
             .insert((source_note_id.to_string(), source_note_title.to_string()));
     }
 
+    fn add_page_linked_mention(
+        &mut self,
+        note_id: &str,
+        source_note_id: &str,
+        source_note_title: &str,
+    ) {
+        self.page_linked_mentions
+            .entry(note_id.to_string())
+            .or_insert_with(HashSet::new)
+            .insert((source_note_id.to_string(), source_note_title.to_string()));
+    }
+
     fn get_transclusions(&self, content_id: &str) -> Option<&HashSet<(String, String)>> {
         self.transclusions.get(content_id)
     }
 
     fn get_linked_mentions(&self, content_id: &str) -> Option<&HashSet<(String, String)>> {
         self.linked_mentions.get(content_id)
+    }
+
+    fn get_page_linked_mentions(&self, note_id: &str) -> Option<&HashSet<(String, String)>> {
+        self.page_linked_mentions.get(note_id)
     }
 
     fn get_transclusion_count(&self, content_id: &str) -> usize {
@@ -223,6 +242,12 @@ impl MarginInfoTracker {
     fn get_linked_mention_count(&self, content_id: &str) -> usize {
         self.linked_mentions
             .get(content_id)
+            .map_or(0, |set| set.len())
+    }
+
+    fn get_page_linked_mention_count(&self, note_id: &str) -> usize {
+        self.page_linked_mentions
+            .get(note_id)
             .map_or(0, |set| set.len())
     }
 
@@ -248,6 +273,9 @@ fn collect_margin_info(notes_map: &HashMap<String, Note>) -> MarginInfoTracker {
             source_note_title,
         );
     }
+
+    // Second pass: determine which block references are actually page-level references
+    finalize_page_vs_block_links(&mut tracker, notes_map);
 
     tracker
 }
@@ -278,7 +306,7 @@ fn collect_info_from_blocks(
             }
         }
 
-        // Check for block references (linked mentions) in text marks
+        // Check for block references and page links in text marks
         collect_text_marks_for_mentions(block, tracker, source_note_id, source_note_title);
 
         // Recursively check children
@@ -288,24 +316,49 @@ fn collect_info_from_blocks(
     }
 }
 
-// Helper function to recursively collect linked mentions from text marks
+// Helper function to recursively collect linked mentions and page links from text marks
 fn collect_text_marks_for_mentions(
     block: &Block,
     tracker: &mut MarginInfoTracker,
     source_note_id: &str,
     source_note_title: &str,
 ) {
-    // Check current block for block references
-    if block.Type == "NodeTextMark" && block.TextMarkType == "block-ref" {
-        let content_id = &block.TextMarkBlockRefID;
-        if !content_id.is_empty() {
-            tracker.add_linked_mention(content_id, source_note_id, source_note_title);
+    // Check current block for block references and page links
+    if block.Type == "NodeTextMark" {
+        if block.TextMarkType == "block-ref" {
+            let content_id = &block.TextMarkBlockRefID;
+            if !content_id.is_empty() {
+                // This is a block-level reference (all block-refs are treated as block mentions for now)
+                tracker.add_linked_mention(content_id, source_note_id, source_note_title);
+            }
         }
     }
 
     // Recursively check children for nested text marks
     for child in &block.Children {
         collect_text_marks_for_mentions(child, tracker, source_note_id, source_note_title);
+    }
+}
+
+// Helper function to finalize page vs block link categorization
+fn finalize_page_vs_block_links(
+    tracker: &mut MarginInfoTracker,
+    notes_map: &HashMap<String, Note>,
+) {
+    // Clone the linked_mentions to avoid borrow issues
+    let linked_mentions_clone = tracker.linked_mentions.clone();
+
+    for (content_id, references) in linked_mentions_clone {
+        // Check if this content_id is actually a note ID (page-level reference)
+        if notes_map.contains_key(&content_id) {
+            // This is a page-level reference, move it from linked_mentions to page_linked_mentions
+            for (source_note_id, source_note_title) in references {
+                tracker.add_page_linked_mention(&content_id, &source_note_id, &source_note_title);
+            }
+            // Remove from block-level linked mentions
+            tracker.linked_mentions.remove(&content_id);
+        }
+        // If it's not a note ID, it stays as a block-level linked mention
     }
 }
 
@@ -1856,8 +1909,40 @@ fn generate_html_for_note(
     let title = if !note.Properties.title.is_empty() {
         note.Properties.title.clone()
     } else {
-        id.to_string()
+        format!("Note {}", id)
     };
+
+    // Check for page-level linked mentions
+    let page_mentions_html =
+        if let Some(page_mentions) = margin_info_tracker.get_page_linked_mentions(id) {
+            if !page_mentions.is_empty() {
+                let count = page_mentions.len();
+                let tooltip_content = page_mentions
+                    .iter()
+                    .map(|(note_id, note_title)| {
+                        format!(r#"<a href="{}.html">{}</a>"#, note_id, note_title)
+                    })
+                    .collect::<Vec<_>>()
+                    .join("");
+
+                format!(
+                    r#" <span class="margin-infonumber page-mentions" data-count="{}">
+                    <span class="margin-infonumber-count">{}</span>
+                    <span class="margin-infonumber-tooltip">
+                        <span class="margin-infonumber-tooltip-title">Pages linking here:</span>
+                        <span class="margin-infonumber-tooltip-content">{}</span>
+                    </span>
+                </span>"#,
+                    count,
+                    MarginInfoTracker::format_count(count),
+                    tooltip_content
+                )
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        };
 
     // Extract creation date from ID if not present in properties
     let created_date = if !note.Properties.created.is_empty() {
@@ -1870,7 +1955,8 @@ fn generate_html_for_note(
         String::new()
     };
 
-    let mut html = html_template.replace("{{title}}", &title);
+    let title_with_mentions = format!("{}{}", title, page_mentions_html);
+    let mut html = html_template.replace("{{title}}", &title_with_mentions);
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
 
@@ -2317,7 +2403,7 @@ fn render_blocks(
                                 format!(r#"<a href="{}.html">{}</a>"#, note_id, note_title)
                             })
                             .collect::<Vec<_>>()
-                            .join("<br>")
+                            .join("")
                     } else {
                         String::new()
                     };
@@ -2346,7 +2432,7 @@ fn render_blocks(
                                 format!(r#"<a href="{}.html">{}</a>"#, note_id, note_title)
                             })
                             .collect::<Vec<_>>()
-                            .join("<br>")
+                            .join("")
                     } else {
                         String::new()
                     };
@@ -3212,10 +3298,6 @@ fn render_text_mark(
                     let mut paragraph_count = 0;
                     for child in &ref_note.Children {
                         if child.Type == "NodeParagraph" {
-                            if paragraph_count > 0 {
-                                excerpt.push_str("<br>");
-                            }
-
                             for grandchild in &child.Children {
                                 if grandchild.Type == "NodeText" {
                                     excerpt.push_str(&escape_html(&grandchild.Data));
@@ -3359,10 +3441,6 @@ fn render_text_mark(
                         let mut paragraph_count = 0;
                         for child in &ref_note.Children {
                             if child.Type == "NodeParagraph" {
-                                if paragraph_count > 0 {
-                                    excerpt.push_str("<br>");
-                                }
-
                                 for grandchild in &child.Children {
                                     if grandchild.Type == "NodeText" {
                                         excerpt.push_str(&escape_html(&grandchild.Data));
@@ -3523,10 +3601,6 @@ fn render_text_mark(
                         let mut paragraph_count = 0;
                         for child in &ref_note.Children {
                             if child.Type == "NodeParagraph" {
-                                if paragraph_count > 0 {
-                                    excerpt.push_str("<br>");
-                                }
-
                                 for grandchild in &child.Children {
                                     if grandchild.Type == "NodeText" {
                                         excerpt.push_str(&escape_html(&grandchild.Data));

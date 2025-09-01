@@ -618,8 +618,10 @@ a {
 
 .title-container {
     display: flex;
+    width: 100%;
     flex-direction: column;
     gap: var(--spacing-1);
+    position: relative;
 }
 
 .article-title {
@@ -1107,6 +1109,13 @@ a {
     right: -55px;
 }
 
+.margin-infonumber.page-mentions {
+    position: absolute;
+    top: 0;
+    right: -30px;
+    z-index: 10;
+}
+
 .margin-infonumber-count {
     display: inline-block;
     padding: 1px 6px;
@@ -1124,7 +1133,7 @@ a {
 
 .margin-infonumber-tooltip {
     position: absolute;
-    top: 25px;
+    top: 30px;
     right: 0;
     background: #333;
     color: white;
@@ -1184,6 +1193,10 @@ a {
 
     .margin-infonumber.linked {
         right: -45px;
+    }
+
+    .margin-infonumber.page-mentions {
+        right: -25px;
     }
 
     .margin-infonumber-tooltip {
