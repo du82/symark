@@ -1200,11 +1200,14 @@ a {
     }
 
     .margin-infonumber-tooltip {
-        right: -50px;
+        left: auto;
+        right: 10px;
         min-width: 120px;
+        max-width: calc(100vw - 60px);
     }
 
     .margin-infonumber-tooltip::before {
+        left: auto;
         right: 15px;
     }
 }
