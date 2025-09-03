@@ -1025,6 +1025,7 @@ fn generate_custom_index_page(
     };
 
     let mut html = html_template.replace("{{title}}", &title);
+    html = html.replace("{{article_title}}", &title);
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
 
@@ -1288,6 +1289,7 @@ fn generate_all_notes_page(
     html_template: &str,
 ) -> std::io::Result<()> {
     let mut html = html_template.replace("{{title}}", "All Notes");
+    html = html.replace("{{article_title}}", "All Notes");
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
     html = html.replace("{{meta_description}}", "Collection of all notes");
@@ -1431,6 +1433,7 @@ fn generate_index_page(
     html_template: &str,
 ) -> std::io::Result<()> {
     let mut html = html_template.replace("{{title}}", "Notes Index");
+    html = html.replace("{{article_title}}", "Notes Index");
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
     html = html.replace("{{meta_description}}", "Collection of all notes");
@@ -1775,6 +1778,7 @@ fn generate_tag_page(
     // Count notes with this tag (we already calculated this above)
 
     let mut html = html_template.replace("{{title}}", &format!("Tag: {}", tag));
+    html = html.replace("{{article_title}}", &format!("Tag: {}", tag));
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
     // Filter notes with this tag for meta description and TOC
@@ -2070,7 +2074,8 @@ fn generate_html_for_note(
     };
 
     let title_with_mentions = format!("{}{}", title, page_mentions_html);
-    let mut html = html_template.replace("{{title}}", &title_with_mentions);
+    let mut html = html_template.replace("{{title}}", &title);
+    html = html.replace("{{article_title}}", &title_with_mentions);
     html = html.replace("{{css_path}}", "styles.css");
     html = html.replace("{{site_name}}", "SyMark");
 
