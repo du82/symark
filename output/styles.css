@@ -1187,6 +1187,11 @@ a {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+    /* Hide all margin notes on mobile */
+    .margin-infonumber {
+        display: none;
+    }
+
     .margin-infonumber.transcluded {
         right: -25px;
     }
