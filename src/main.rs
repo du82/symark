@@ -4014,6 +4014,7 @@ fn render_text_mark(
             html.push_str("<i></i></span></span>");
         }
         "block-ref" => {
+            // First check if it's a note ID
             if notes_map.contains_key(&block.TextMarkBlockRefID) {
                 let ref_note = &notes_map[&block.TextMarkBlockRefID];
                 let title = if !block.TextMarkTextContent.is_empty() {
@@ -4070,13 +4071,75 @@ fn render_text_mark(
                 ));
                 html.push_str("<i></i></span></span>");
             } else {
-                html.push_str(&format!(
-                    "<span{} title=\"Missing reference: {}\">{}",
-                    id_attr,
-                    block.TextMarkBlockRefID,
-                    escape_html(&block.TextMarkTextContent)
-                ));
-                html.push_str("</span>");
+                // Check if it's a block ID within a note
+                let mut found_block = false;
+                let mut target_note_id = String::new();
+                let mut target_note_title = String::new();
+                let mut block_excerpt = String::new();
+
+                for (note_id, note) in notes_map {
+                    if let Some(found_block_ref) =
+                        find_block_by_id(&block.TextMarkBlockRefID, &note.Children)
+                    {
+                        found_block = true;
+                        target_note_id = note_id.clone();
+                        target_note_title = note.Properties.title.clone();
+
+                        // Extract text content from the found block
+                        if found_block_ref.Type == "NodeParagraph" {
+                            for child in &found_block_ref.Children {
+                                if child.Type == "NodeText" {
+                                    block_excerpt.push_str(&escape_html(&child.Data));
+                                } else if child.Type == "NodeTextMark" {
+                                    block_excerpt
+                                        .push_str(&escape_html(&child.TextMarkTextContent));
+                                }
+                            }
+                        } else {
+                            block_excerpt = escape_html(&found_block_ref.Data);
+                        }
+
+                        // Smart truncation for block content
+                        block_excerpt = smart_truncate_excerpt(&block_excerpt, 1);
+                        break;
+                    }
+                }
+
+                if found_block {
+                    let title = if !block.TextMarkTextContent.is_empty() {
+                        block.TextMarkTextContent.clone()
+                    } else {
+                        target_note_title.clone()
+                    };
+
+                    // Create tooltip HTML
+                    html.push_str(&format!("<span{} class=\"tooltip\">", id_attr));
+                    html.push_str(&format!(
+                        "<a href=\"{}.html#{}\">{}",
+                        target_note_id,
+                        block.TextMarkBlockRefID,
+                        escape_html(&title)
+                    ));
+                    html.push_str("</a>");
+                    html.push_str("<span class=\"right bottom\">");
+                    html.push_str(&format!(
+                        "<span class=\"tooltip-title\">{}</span>",
+                        escape_html(&target_note_title)
+                    ));
+                    html.push_str(&format!(
+                        "<span class=\"tooltip-excerpt\">{}</span>",
+                        block_excerpt
+                    ));
+                    html.push_str("<i></i></span></span>");
+                } else {
+                    html.push_str(&format!(
+                        "<span{} title=\"Missing reference: {}\">{}",
+                        id_attr,
+                        block.TextMarkBlockRefID,
+                        escape_html(&block.TextMarkTextContent)
+                    ));
+                    html.push_str("</span>");
+                }
             }
         }
         _ => {
