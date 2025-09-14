@@ -2510,11 +2510,12 @@ fn render_blocks(
         };
 
         if transclusion_count > 0 || linked_mention_count > 0 {
-            let mut indicators_html = String::new();
+            let indicators_html = if transclusion_count > 0 && linked_mention_count > 0 {
+                // Both exist - create combined indicator
+                let total_count = transclusion_count + linked_mention_count;
 
-            // Add transcluded indicator
-            if transclusion_count > 0 {
-                let tooltip_content =
+                // Get tooltip content for both types
+                let transclusion_content =
                     if let Some(transclusions) = margin_info_tracker.get_transclusions(&block.ID) {
                         transclusions
                             .iter()
@@ -2527,23 +2528,7 @@ fn render_blocks(
                         String::new()
                     };
 
-                indicators_html.push_str(&format!(
-                    r#"<span class="margin-infonumber transcluded" data-count="{}">
-                        <span class="margin-infonumber-count">{}</span>
-                        <span class="margin-infonumber-tooltip">
-                            <span class="margin-infonumber-tooltip-title">Transcluded in:</span>
-                            <span class="margin-infonumber-tooltip-content">{}</span>
-                        </span>
-                    </span>"#,
-                    transclusion_count,
-                    MarginInfoTracker::format_count(transclusion_count),
-                    tooltip_content
-                ));
-            }
-
-            // Add linked mentions indicator
-            if linked_mention_count > 0 {
-                let tooltip_content =
+                let linked_mention_content =
                     if let Some(mentions) = margin_info_tracker.get_linked_mentions(&block.ID) {
                         mentions
                             .iter()
@@ -2556,19 +2541,107 @@ fn render_blocks(
                         String::new()
                     };
 
-                indicators_html.push_str(&format!(
-                    r#"<span class="margin-infonumber linked" data-count="{}">
+                // Determine order based on which has more connections (more connections first)
+                let (first_title, first_content, second_title, second_content) =
+                    if transclusion_count > linked_mention_count {
+                        (
+                            "Transcluded in:",
+                            transclusion_content,
+                            "Pages linking here:",
+                            linked_mention_content,
+                        )
+                    } else {
+                        (
+                            "Pages linking here:",
+                            linked_mention_content,
+                            "Transcluded in:",
+                            transclusion_content,
+                        )
+                    };
+
+                format!(
+                    r#"<span class="margin-infonumber transcluded combined" data-count="{}">
                         <span class="margin-infonumber-count">{}</span>
                         <span class="margin-infonumber-tooltip">
-                            <span class="margin-infonumber-tooltip-title">Linked mentions:</span>
+                            <span class="margin-infonumber-tooltip-title">{}</span>
+                            <span class="margin-infonumber-tooltip-content">{}</span>
+                            <span class="margin-infonumber-tooltip-title">{}</span>
                             <span class="margin-infonumber-tooltip-content">{}</span>
                         </span>
                     </span>"#,
-                    linked_mention_count,
-                    MarginInfoTracker::format_count(linked_mention_count),
-                    tooltip_content
-                ));
-            }
+                    total_count,
+                    MarginInfoTracker::format_count(total_count),
+                    first_title,
+                    first_content,
+                    second_title,
+                    second_content
+                )
+            } else {
+                // Only one type exists - use existing separate indicators
+                let mut indicators = String::new();
+
+                // Add transcluded indicator
+                if transclusion_count > 0 {
+                    let tooltip_content = if let Some(transclusions) =
+                        margin_info_tracker.get_transclusions(&block.ID)
+                    {
+                        transclusions
+                            .iter()
+                            .map(|(note_id, note_title)| {
+                                format!(r#"<a href="{}.html">{}</a>"#, note_id, note_title)
+                            })
+                            .collect::<Vec<_>>()
+                            .join("")
+                    } else {
+                        String::new()
+                    };
+
+                    indicators.push_str(&format!(
+                        r#"<span class="margin-infonumber transcluded" data-count="{}">
+                            <span class="margin-infonumber-count">{}</span>
+                            <span class="margin-infonumber-tooltip">
+                                <span class="margin-infonumber-tooltip-title">Transcluded in:</span>
+                                <span class="margin-infonumber-tooltip-content">{}</span>
+                            </span>
+                        </span>"#,
+                        transclusion_count,
+                        MarginInfoTracker::format_count(transclusion_count),
+                        tooltip_content
+                    ));
+                }
+
+                // Add linked mentions indicator
+                if linked_mention_count > 0 {
+                    let tooltip_content = if let Some(mentions) =
+                        margin_info_tracker.get_linked_mentions(&block.ID)
+                    {
+                        mentions
+                            .iter()
+                            .map(|(note_id, note_title)| {
+                                format!(r#"<a href="{}.html">{}</a>"#, note_id, note_title)
+                            })
+                            .collect::<Vec<_>>()
+                            .join("")
+                    } else {
+                        String::new()
+                    };
+
+                    indicators.push_str(&format!(
+                        r#"<span class="margin-infonumber linked" data-count="{}">
+                            <span class="margin-infonumber-count">{}</span>
+                            <span class="margin-infonumber-tooltip">
+                                <span class="margin-infonumber-tooltip-title">Linked mentions:</span>
+                                <span class="margin-infonumber-tooltip-content">{}</span>
+                            </span>
+                        </span>"#,
+                        linked_mention_count,
+                        MarginInfoTracker::format_count(linked_mention_count),
+                        tooltip_content
+                    ));
+                }
+
+                indicators
+            };
 
             // Wrap the block with a positioning container and add the indicators
             html.push_str(&format!(
