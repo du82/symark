@@ -1165,6 +1165,12 @@ a {
     display: block;
 }
 
+.margin-infonumber-tooltip-title:not(:first-child) {
+    margin-top: 8px;
+    padding-top: 4px;
+    border-top: 1px solid #555;
+}
+
 .margin-infonumber-tooltip-content {
     display: block;
 }
