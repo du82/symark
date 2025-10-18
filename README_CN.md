@@ -1,6 +1,8 @@
 <h1 align="center">SyMark - 思源笔记网页转换器</h1>
 SyMark 是一个开源项目,可一键将思源笔记内容转换到您的网站。笔记内的复杂内容(双向链接、标签和任何字体格式)在网页上自然的显示,所见即所得。
 
+<p align="center">Read in: <a href="README.md">English</a></p>
+
 ![symark](https://github.com/user-attachments/assets/5e5eedc5-412e-4635-a768-64d46e86b75e)
 
 # 总览
