@@ -1,6 +1,8 @@
 <h1 align="center">SyMark - Turn SiYuan notes into webpages</h1>
 SyMark is an open-source static site generator that converts SiYuan notebooks into responsive websites with a single terminal command. Every aspect of your notes—bidirectional links, tags, and all formatting options—renders elegantly on the web, just as it does in the desktop editor.
 
+<p align="center">Read in: <a href="README_CN.md">简体中文</a></p>
+
 ![symark](https://github.com/user-attachments/assets/5e5eedc5-412e-4635-a768-64d46e86b75e)
 
 ## Overview
